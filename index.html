@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Báo cáo kết quả học viên</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <!-- Firebase SDK v9 with Compatibility Layer -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -99,7 +99,7 @@
                         <th class="border p-2">Ngữ pháp</th>
                         <th class="border p-2">Nghe</th>
                         <th class="border p-2">Kaiwa</th>
-                        <th class="border p-2">Trung bình</th>
+                        <th class="border p-2">Tỷ lệ</th>
                         <th class="border p-2">Xếp loại</th>
                     </tr>
                 </thead>
@@ -151,7 +151,7 @@
         function getInputValue(id) {
             const element = document.getElementById(id);
             const value = parseFloat(element.value);
-            return element && !isNaN(value) && value >= 0 && value <= 100 ? value : 0;
+            return element && !isNaN(value) && value >= 0 && value <= 100 ? value : null;
         }
 
         // Hàm lấy giá trị văn bản
@@ -164,11 +164,9 @@
         async function saveReport(report) {
             try {
                 if (currentReportId) {
-                    // Update existing report
                     await db.collection('testHistorybaocao').doc(currentReportId).set(report);
                     alert('Báo cáo đã được cập nhật thành công!');
                 } else {
-                    // Create new report
                     const docRef = await db.collection('testHistorybaocao').add(report);
                     currentReportId = docRef.id;
                     alert('Báo cáo đã được lưu thành công!');
@@ -185,6 +183,118 @@
             document.getElementById('charts').classList.add('hidden');
         }
 
+        // Hàm vẽ biểu đồ
+        function renderCharts(report) {
+            const ctxBar = document.getElementById('barChart')?.getContext('2d');
+            const ctxRadar = document.getElementById('radarChart')?.getContext('2d');
+            if (!ctxBar || !ctxRadar) {
+                console.error('Canvas elements not found');
+                alert('Không tìm thấy canvas để vẽ biểu đồ.');
+                return;
+            }
+
+            // Validate scores
+            const scoreCategories = ['vocab', 'grammar', 'listening', 'kaiwa'];
+            for (const category of scoreCategories) {
+                if (!report.scores[category] || report.scores[category].length !== 5) {
+                    console.error(`Invalid scores data for ${category}`);
+                    alert('Dữ liệu điểm không hợp lệ để vẽ biểu đồ.');
+                    return;
+                }
+            }
+
+            // Destroy existing charts
+            if (window.barChart && typeof window.barChart.destroy === 'function') {
+                window.barChart.destroy();
+            }
+            if (window.radarChart && typeof window.radarChart.destroy === 'function') {
+                window.radarChart.destroy();
+            }
+
+            try {
+                // Bar chart
+                window.barChart = new Chart(ctxBar, {
+                    type: 'bar',
+                    data: {
+                        labels: ['1-6', '7-12', '13-18', '19-25', '26-30'],
+                        datasets: [
+                            {
+                                label: 'Từ vựng',
+                                data: report.scores.vocab.map(score => score !== null ? score : 0),
+                                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Ngữ pháp',
+                                data: report.scores.grammar.map(score => score !== null ? score : 0),
+                                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Nghe',
+                                data: report.scores.listening.map(score => score !== null ? score : 0),
+                                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Kaiwa',
+                                data: report.scores.kaiwa.map(score => score !== null ? score : 0),
+                                backgroundColor: 'rgba(255, 206, 86, 0.5)',
+                                borderColor: 'rgba(255, 206, 86, 1)',
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        scales: {
+                            y: { beginAtZero: true, max: 100 }
+                        },
+                        plugins: {
+                            legend: { display: true }
+                        }
+                    }
+                });
+
+                // Radar chart
+                window.radarChart = new Chart(ctxRadar, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Từ vựng', 'Ngữ pháp', 'Nghe', 'Kaiwa'],
+                        datasets: ['1-6', '7-12', '13-18', '19-25', '26-30'].map((group, index) => ({
+                            label: group,
+                            data: [
+                                report.scores.vocab[index] !== null ? report.scores.vocab[index] : 0,
+                                report.scores.grammar[index] !== null ? report.scores.grammar[index] : 0,
+                                report.scores.listening[index] !== null ? report.scores.listening[index] : 0,
+                                report.scores.kaiwa[index] !== null ? report.scores.kaiwa[index] : 0
+                            ],
+                            fill: true,
+                            backgroundColor: `rgba(${Math.min(index * 50, 255)}, 99, 132, 0.2)`,
+                            borderColor: `rgba(${Math.min(index * 50, 255)}, 99, 132, 1)`,
+                            pointBackgroundColor: `rgba(${Math.min(index * 50, 255)}, 99, 132, 1)`,
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: `rgba(${Math.min(index * 50, 255)}, 99, 132, 1)`
+                        }))
+                    },
+                    options: {
+                        scales: {
+                            r: { angleLines: { display: false }, suggestedMin: 0, suggestedMax: 100 }
+                        },
+                        plugins: {
+                            legend: { display: true }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error rendering charts:', error.message);
+                alert(`Có lỗi khi vẽ biểu đồ: ${error.message}`);
+            }
+        }
+
         // Hàm tính toán và hiển thị kết quả
         async function calculateResults() {
             // Input validation
@@ -193,6 +303,16 @@
             if (!fullName || !className) {
                 alert('Vui lòng nhập đầy đủ Họ và Tên và Lớp.');
                 return;
+            }
+
+            // Validate scores
+            const scoreInputs = document.querySelectorAll('input[type="number"]');
+            for (let input of scoreInputs) {
+                const value = parseFloat(input.value);
+                if (input.value !== '' && (isNaN(value) || value < 0 || value > 100)) {
+                    alert('Điểm phải nằm trong khoảng từ 0 đến 100.');
+                    return;
+                }
             }
 
             // Lấy thông tin học viên
@@ -232,10 +352,16 @@
                 ]
             };
 
-            // Tính trung bình và xếp loại
+            // Tính tỷ lệ và xếp loại
             const groups = ['1-6', '7-12', '13-18', '19-25', '26-30'];
             const results = groups.map((group, index) => {
-                const avg = (scores.vocab[index] + scores.grammar[index] + scores.listening[index] + scores.kaiwa[index]) / 4;
+                const validScores = [
+                    scores.vocab[index],
+                    scores.grammar[index],
+                    scores.listening[index],
+                    scores.kaiwa[index]
+                ].filter(score => score !== null);
+                const avg = validScores.length > 0 ? validScores.reduce((sum, score) => sum + score, 0) / validScores.length : 0;
                 let rank = '';
                 let symbol = '';
                 if (avg >= 85) { rank = 'A'; symbol = '◎'; }
@@ -243,7 +369,16 @@
                 else if (avg >= 60) { rank = 'C'; symbol = '○'; }
                 else if (avg >= 55) { rank = 'D'; symbol = '△'; }
                 else { rank = 'F'; symbol = 'X'; }
-                return { group, vocab: scores.vocab[index], grammar: scores.grammar[index], listening: scores.listening[index], kaiwa: scores.kaiwa[index], avg, rank, symbol };
+                return {
+                    group,
+                    vocab: scores.vocab[index],
+                    grammar: scores.grammar[index],
+                    listening: scores.listening[index],
+                    kaiwa: scores.kaiwa[index],
+                    avg,
+                    rank,
+                    symbol
+                };
             });
 
             const report = {
@@ -284,88 +419,31 @@
             resultTable.innerHTML = report.results.map(r => `
                 <tr>
                     <td class="border p-2">${r.group}</td>
-                    <td class="border p-2">${r.vocab}</td>
-                    <td class="border p-2">${r.grammar}</td>
-                    <td class="border p-2">${r.listening}</td>
-                    <td class="border p-2">${r.kaiwa}</td>
-                    <td class="border p-2">${r.avg.toFixed(2)}</td>
-                    <td class="border p-2">${r.rank} (${r.symbol})</td>
+                    <td class="border p-2">${r.vocab !== null ? r.vocab : '-'}</td>
+                    <td class="border p-2">${r.grammar !== null ? r.grammar : '-'}</td>
+                    <td class="border p-2">${r.listening !== null ? r.listening : '-'}</td>
+                    <td class="border p-2">${r.kaiwa !== null ? r.kaiwa : '-'}</td>
+                    <td class="border p-2">${Math.round(r.avg)}%</td>
+                    <td class="border p-2 ${r.rank === 'A' ? 'bg-green-100' : r.rank === 'F' ? 'bg-red-100' : ''}">
+                        ${r.rank} (${r.symbol})
+                    </td>
                 </tr>
             `).join('');
 
             // Hiển thị kết quả và biểu đồ
-            document.getElementById('results').classList.remove('hidden');
-            document.getElementById('charts').classList.remove('hidden');
+            const resultsDiv = document.getElementById('results');
+            const chartsDiv = document.getElementById('charts');
+            if (resultsDiv && chartsDiv) {
+                resultsDiv.classList.remove('hidden');
+                chartsDiv.classList.remove('hidden');
+            } else {
+                console.error('Results or charts div not found');
+                alert('Không thể hiển thị kết quả hoặc biểu đồ.');
+                return;
+            }
 
             // Vẽ biểu đồ
-            const ctxBar = document.getElementById('barChart').getContext('2d');
-            if (window.barChart) window.barChart.destroy();
-            window.barChart = new Chart(ctxBar, {
-                type: 'bar',
-                data: {
-                    labels: ['1-6', '7-12', '13-18', '19-25', '26-30'],
-                    datasets: [
-                        {
-                            label: 'Từ vựng',
-                            data: report.scores.vocab,
-                            backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 1
-                        },
-                        {
-                            label: 'Ngữ pháp',
-                            data: report.scores.grammar,
-                            backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            borderWidth: 1
-                        },
-                        {
-                            label: 'Nghe',
-                            data: report.scores.listening,
-                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            borderWidth: 1
-                        },
-                        {
-                            label: 'Kaiwa',
-                            data: report.scores.kaiwa,
-                            backgroundColor: 'rgba(255, 206, 86, 0.5)',
-                            borderColor: 'rgba(255, 206, 86, 1)',
-                            borderWidth: 1
-                        }
-                    ]
-                },
-                options: {
-                    scales: {
-                        y: { beginAtZero: true, max: 100 }
-                    }
-                }
-            });
-
-            const ctxRadar = document.getElementById('radarChart').getContext('2d');
-            if (window.radarChart) window.radarChart.destroy();
-            window.radarChart = new Chart(ctxRadar, {
-                type: 'radar',
-                data: {
-                    labels: ['Từ vựng', 'Ngữ pháp', 'Nghe', 'Kaiwa'],
-                    datasets: ['1-6', '7-12', '13-18', '19-25', '26-30'].map((group, index) => ({
-                        label: group,
-                        data: [report.scores.vocab[index], report.scores.grammar[index], report.scores.listening[index], report.scores.kaiwa[index]],
-                        fill: true,
-                        backgroundColor: `rgba(${index * 50}, 99, 132, 0.2)`,
-                        borderColor: `rgba(${index * 50}, 99, 132, 1)`,
-                        pointBackgroundColor: `rgba(${index * 50}, 99, 132, 1)`,
-                        pointBorderColor: '#fff',
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: `rgba(${index * 50}, 99, 132, 1)`
-                    }))
-                },
-                options: {
-                    scales: {
-                        r: { angleLines: { display: false }, suggestedMin: 0, suggestedMax: 100 }
-                    }
-                }
-            });
+            renderCharts(report);
         }
 
         // Load report for editing
@@ -385,7 +463,8 @@
                         document.getElementById('xkld').value = report.xkld;
                         ['vocab', 'grammar', 'listening', 'kaiwa'].forEach((category, i) => {
                             for (let j = 1; j <= 5; j++) {
-                                document.getElementById(`${category}${j}`).value = report.scores[category][j - 1];
+                                const score = report.scores[category][j - 1];
+                                document.getElementById(`${category}${j}`).value = score !== null ? score : '';
                             }
                         });
                     } else {
@@ -395,6 +474,12 @@
                     console.error('Error loading report:', error);
                     alert('Có lỗi khi tải báo cáo.');
                 }
+            }
+
+            // Check if Chart.js loaded
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js not loaded');
+                alert('Không thể tải thư viện Chart.js. Vui lòng kiểm tra kết nối mạng.');
             }
         });
     </script>
