@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Báo cáo kết quả học viên</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="container mx-auto p-6">
+        <h1 class="text-3xl font-bold text-center mb-6">Báo cáo Kết quả Học viên</h1>
+
+        <!-- Form Nhập thông tin -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-xl font-semibold mb-4">Thông tin học viên</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input id="fullName" type="text" placeholder="Họ và Tên" class="border p-2 rounded">
+                <input id="class" type="text" placeholder="Lớp" class="border p-2 rounded">
+                <input id="company" type="text" placeholder="Tên Công ty" class="border p-2 rounded">
+                <input id="union" type="text" placeholder="Nghiệp Đoàn" class="border p-2 rounded">
+                <input id="xkld" type="text" placeholder="XKLD" class="border p-2 rounded">
+            </div>
+        </div>
+
+        <!-- Form Nhập điểm -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-xl font-semibold mb-4">Nhập điểm bài tập</h2>
+            <div class="space-y-4">
+                <!-- Nhóm bài 1-6 -->
+                <div>
+                    <h3 class="font-medium">Bài 1-6</h cập nhật dữ liệu3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <input type="number" min="0" max="100" placeholder="Từ vựng" class="border p-2 rounded" id="vocab1">
+                        <input type="number" min="0" max="100" placeholder="Ngữ pháp Đọc hiểu" class="border p-2 rounded" id="grammar1">
+                        <input type="number" min="0" max="100" placeholder="Nghe" class="border p-2 rounded" id="listening1">
+                        <input type="number" min="0" max="100" placeholder="Kaiwa" class="border p-2 rounded" id="kaiwa1">
+                    </div>
+                </div>
+                <!-- Nhóm bài 7-12 -->
+                <div>
+                    <h3 class="font-medium">Bài 7-12</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <input type="number" min="0" max="100" placeholder="Từ vựng" class="border p-2 rounded" id="vocab2">
+                        <input type="number" min="0" max="100" placeholder="Ngữ pháp Đọc hiểu" class="border p-2 rounded" id="grammar2">
+                        <input type="number" min="0" max="100" placeholder="Nghe" class="border p-2 rounded" id="listening2">
+                                                <input type="number" min="0" max="100" placeholder="Kaiwa" class="border p-2 rounded" id="kaiwa2">
+                    </div>
+                </div>
+                <!-- Nhóm bài 13-18 -->
+                <div>
+                    <h3 class="font-medium">Bài 13-18</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <input type="number" min="0" max="100" placeholder="Từ vựng" class="border p-2 rounded" id="vocab3">
+                        <input type="number" min="0" max="100" placeholder="Ngữ pháp Đọc hiểu" class="border p-2 rounded" id="grammar3">
+                        <input type="number" min="0" max="100" placeholder="Nghe" class="border p-2 rounded" id="listening3">
+                        <input type="number" min="0" max="100" placeholder="Kaiwa" class="border p-2 rounded" id="kaiwa3">
+                    </div>
+                </div>
+                <!-- Nhóm bài 19-25 -->
+                <div>
+                    <h3 class="font-medium">Bài 19-25</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <input type="number" min="0" max="100" placeholder="Từ vựng" class="border p-2 rounded" id="vocab4">
+                        <input type="number" min="0" max="100" placeholder="Ngữ pháp Đọc hiểu" class="border p-2 rounded" id="grammar4">
+                        <input type="number" min="0" max="100" placeholder="Nghe" class="border p-2 rounded" id="listening4">
+                        <input type="number" min="0" max="100" placeholder="Kaiwa" class="border p-2 rounded" id="kaiwa4">
+                    </div>
+                </div>
+                <!-- Nhóm bài 26-30 -->
+                <div>
+                    <h3 class="font-medium">Bài 26-30</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <input type="number" min="0" max="100" placeholder="Từ vựng" class="border p-2 rounded" id="vocab5">
+                        <input type="number" min="0" max="100" placeholder="Ngữ pháp Đọc hiểu" class="border p-2 rounded" id="grammar5">
+                        <input type="number" min="0" max="100" placeholder="Nghe" class="border p-2 rounded" id="listening5">
+                        <input type="number" min="0" max="100" placeholder="Kaiwa" class="border p-2 rounded" id="kaiwa5">
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 flex space-x-4">
+                <button onclick="calculateResults()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Cập nhật dữ liệu</button>
+                <a href="history.html" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Lịch sử báo cáo</a>
+            </div>
+        </div>
+
+        <!-- Kết quả -->
+        <div id="results" class="bg-white p-6 rounded-lg shadow-md hidden">
+            <h2 class="text-xl font-semibold mb-4">Kết quả</h2>
+            <div id="studentInfo" class="mb-4"></div>
+            <table class="w-full border-collapse border">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="border p-2">Nhóm bài</th>
+                        <th class="border p-2">Từ vựng</th>
+                        <th class="border p-2">Ngữ pháp</th>
+                        <th class="border p-2">Nghe</th>
+                        <th class="border p-2">Kaiwa</th>
+                        <th class="border p-2">Trung bình</th>
+                        <th class="border p-2">Xếp loại</th>
+                    </tr>
+                </thead>
+                <tbody id="resultTable"></tbody>
+            </table>
+            <div class="mt-4">
+                <button onclick="editResults()" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">Chỉnh sửa</button>
+            </div>
+        </div>
+
+        <!-- Biểu đồ -->
+        <div class="bg-white p-6 rounded-lg shadow-md mt-6">
+            <h2 class="text-xl font-semibold mb-4">Phân tích kết quả</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <canvas id="barChart"></canvas>
+                </div>
+                <div>
+                    <canvas id="radarChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentReportId = null;
+
+        // Hàm tạo UUID đơn giản
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // Hàm hỗ trợ lấy giá trị input
+        function getInputValue(id) {
+            const element = document.getElementById(id);
+            return element && !isNaN(parseFloat(element.value)) ? parseFloat(element.value) : 0;
+        }
+
+        // Hàm lấy giá trị văn bản
+        function getTextValue(id) {
+            const element = document.getElementById(id);
+            return element ? element.value : '';
+        }
+
+        // Hàm lưu báo cáo vào localStorage
+        function saveReport(report) {
+            const reports = JSON.parse(localStorage.getItem('reports') || '[]');
+            if (currentReportId) {
+                const index = reports.findIndex(r => r.id === currentReportId);
+                if (index !== -1) {
+                    reports[index] = report;
+                }
+            } else {
+                report.id = generateUUID();
+                reports.push(report);
+            }
+            localStorage.setItem('reports', JSON.stringify(reports));
+        }
+
+        // Hàm chỉnh sửa kết quả hiện tại
+        function editResults() {
+            document.getElementById('results').classList.add('hidden');
+            // Form đã được điền sẵn dữ liệu từ báo cáo hiện tại
+        }
+
+        // Hàm tính toán và hiển thị kết quả
+        function calculateResults() {
+            // Lấy thông tin học viên
+            const fullName = getTextValue('fullName');
+            const className = getTextValue('class');
+            const company = getTextValue('company');
+            const union = getTextValue('union');
+            const xkld = getTextValue('xkld');
+
+            // Lấy điểm
+            const scores = {
+                vocab: [
+                    getInputValue('vocab1'),
+                    getInputValue('vocab2'),
+                    getInputValue('vocab3'),
+                    getInputValue('vocab4'),
+                    getInputValue('vocab5')
+                ],
+                grammar: [
+                    getInputValue('grammar1'),
+                    getInputValue('grammar2'),
+                    getInputValue('grammar3'),
+                    getInputValue('grammar4'),
+                    getInputValue('grammar5')
+                ],
+                listening: [
+                    getInputValue('listening1'),
+                    getInputValue('listening2'),
+                    getInputValue('listening3'),
+                    getInputValue('listening4'),
+                    getInputValue('listening5')
+                ],
+                kaiwa: [
+                    getInputValue('kaiwa1'),
+                    getInputValue('kaiwa2'),
+                    getInputValue('kaiwa3'),
+                    getInputValue('kaiwa4'),
+                    getInputValue('kaiwa5')
+                ]
+            };
+
+            // Tính trung bình và xếp loại
+            const groups = ['1-6', '7-12', '13-18', '19-25', '26-30'];
+            const results = groups.map((group, index) => {
+                const avg = (scores.vocab[index] + scores.grammar[index] + scores.listening[index] + scores.kaiwa[index]) / 4;
+                let rank = '';
+                let symbol = '';
+                if (avg >= 85) { rank = 'A'; symbol = '◎'; }
+                else if (avg >= 70) { rank = 'B'; symbol = '○'; }
+                else if (avg >= 60) { rank = 'C'; symbol = '○'; }
+                else if (avg >= 55) { rank = 'D'; symbol = '△'; }
+                else { rank = 'F'; symbol = 'X'; }
+                return { group, vocab: scores.vocab[index], grammar: scores.grammar[index], listening: scores.listening[index], kaiwa: scores.kaiwa[index], avg, rank, symbol };
+            });
+
+            const report = {
+                fullName,
+                className,
+                company,
+                union,
+                xkld,
+                scores,
+                results,
+                timestamp: new Date().toISOString()
+            };
+
+            // Lưu báo cáo
+            saveReport(report);
+
+            // Hiển thị kết quả
+            displayResults(report);
+        }
+
+        // Hàm hiển thị kết quả
+        function displayResults(report) {
+            // Hiển thị thông tin học viên
+            document.getElementById('studentInfo').innerHTML = `
+                <p><strong>Họ và Tên:</strong> ${report.fullName}</p>
+                <p><strong>Lớp:</strong> ${report.className}</p>
+                <p><strong>Công ty:</strong> ${report.company}</p>
+                <p><strong>Nghiệp đoàn:</strong> ${report.union}</p>
+                <p><strong>XKLD:</strong> ${report.xkld}</p>
+            `;
+
+            // Hiển thị bảng kết quả
+            const resultTable = document.getElementById('resultTable');
+            resultTable.innerHTML = report.results.map(r => `
+                <tr>
+                    <td class="border p-2">${r.group}</td>
+                    <td class="border p-2">${r.vocab}</td>
+                    <td class="border p-2">${r.grammar}</td>
+                    <td class="border p-2">${r.listening}</td>
+                    <td class="border p-2">${r.kaiwa}</td>
+                    <td class="border p-2">${r.avg.toFixed(2)}</td>
+                    <td class="border p-2">${r.rank} (${r.symbol})</td>
+                </tr>
+            `).join('');
+
+            // Hiển thị kết quả
+            document.getElementById('results').classList.remove('hidden');
+
+            // Vẽ biểu đồ
+            const ctxBar = document.getElementById('barChart').getContext('2d');
+            if (window.barChart) window.barChart.destroy();
+            window.barChart = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: ['1-6', '7-12', '13-18', '19-25', '26-30'],
+                    datasets: [
+                        {
+                            label: 'Từ vựng',
+                            data: report.scores.vocab,
+                            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Ngữ pháp',
+                            data: report.scores.grammar,
+                            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Nghe',
+                            data: report.scores.listening,
+                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Kaiwa',
+                            data: report.scores.kaiwa,
+                            backgroundColor: 'rgba(255, 206, 86, 0.5)',
+                            borderColor: 'rgba(255, 206, 86, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    }
+                }
+            });
+
+            const ctxRadar = document.getElementById('radarChart').getContext('2d');
+            if (window.radarChart) window.radarChart.destroy();
+            window.radarChart = new Chart(ctxRadar, {
+                type: 'radar',
+                data: {
+                    labels: ['Từ vựng', 'Ngữ pháp', 'Nghe', 'Kaiwa'],
+                    datasets: ['1-6', '7-12', '13-18', '19-25', '26-30'].map((group, index) => ({
+                        label: group,
+                        data: [report.scores.vocab[index], report.scores.grammar[index], report.scores.listening[index], report.scores.kaiwa[index]],
+                        fill: true,
+                        backgroundColor: `rgba(${index * 50}, 99, 132, 0.2)`,
+                        borderColor: `rgba(${index * 50}, 99, 132, 1)`,
+                        pointBackgroundColor: `rgba(${index * 50}, 99, 132, 1)`,
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: `rgba(${index * 50}, 99, 132, 1)`
+                    }))
+                },
+                options: {
+                    scales: {
+                        r: { angleLines: { display: false }, suggestedMin: 0, suggestedMax: 100 }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
