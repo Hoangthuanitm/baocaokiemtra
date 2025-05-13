@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lịch sử báo cáo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="container mx-auto p-6">
+        <h1 class="text-3xl font-bold text-center mb-6">Lịch sử Báo cáo</h1>
+
+        <!-- Bảng lịch sử báo cáo -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-xl font-semibold mb-4">Danh sách báo cáo</h2>
+            <table class="w-full border-collapse border">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="border p-2">Họ và Tên</th>
+                        <th class="border p-2">Lớp</th>
+                        <th class="border p-2">Thời gian</th>
+                        <th class="border p-2">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTable"></tbody>
+            </table>
+            <div class="mt-4">
+                <a href="index.html" class="bg-blue-500 text W-white px-4 py-2 rounded hover:bg-blue-600">Quay lại nhập liệu</a>
+            </div>
+        </div>
+
+        <!-- Kết quả -->
+        <div id="results" class="bg-white p-6 rounded-lg shadow-md hidden">
+            <h2 class="text-xl font-semibold mb-4">Kết quả</h2>
+            <div id="studentInfo" class="mb-4"></div>
+            <table class="w-full border-collapse border">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="border p-2">Nhóm bài</th>
+                        <th class="border p-2">Từ vựng</th>
+                        <th class="border p-2">Ngữ pháp</th>
+                        <th class="border p-2">Nghe</th>
+                        <th class="border p-2">Kaiwa</th>
+                        <th class="border p-2">Trung bình</th>
+                        <th class="border p-2">Xếp loại</th>
+                    </tr>
+                </thead>
+                <tbody id="resultTable"></tbody>
+            </table>
+        </div>
+
+        <!-- Biểu đồ -->
+        <div id="charts" class="bg-white p-6 rounded-lg shadow-md mt-6 hidden">
+            <h2 class="text-xl font-semibold mb-4">Phân tích kết quả</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <canvas id="barChart"></canvas>
+                </div>
+                <div>
+                    <canvas id="radarChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Hàm tải lịch sử báo cáo
+        function loadHistory() {
+            const reports = JSON.parse(localStorage.getItem('reports') || '[]');
+            const historyTable = document.getElementById('historyTable');
+            historyTable.innerHTML = reports.map(report => `
+                <tr>
+                    <td class="border p-2">${report.fullName}</td>
+                    <td class="border p-2">${report.className}</td>
+                    <td class="border p-2">${new Date(report.timestamp).toLocaleString('vi-VN')}</td>
+                    <td class="border p-2">
+                        <button onclick="viewReport('${report.id}')" class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">Xem</button>
+                        <a href="index.html?edit=${report.id}" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">Chỉnh sửa</a>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Hàm xem báo cáo
+        function viewReport(id) {
+            const reports = JSON.parse(localStorage.getItem('reports') || '[]');
+            const report = reports.find(r => r.id === id);
+            if (report) {
+                displayResults(report);
+            }
+        }
+
+        // Hàm hiển thị kết quả
+        function displayResults(report) {
+            // Hiển thị thông tin học viên
+            document.getElementById('studentInfo').innerHTML = `
+                <p><strong>Họ và Tên:</strong> ${report.fullName}</p>
+                <p><strong>Lớp:</strong> ${report.className}</p>
+                <p><strong>Công ty:</strong> ${report.company}</p>
+                <p><strong>Nghiệp đoàn:</strong> ${report.union}</p>
+                <p><strong>XKLD:</strong> ${report.xkld}</p>
+            `;
+
+            // Hiển thị bảng kết quả
+            const resultTable = document.getElementById('resultTable');
+            resultTable.innerHTML = report.results.map(r => `
+                <tr>
+                    <td class="border p-2">${r.group}</td>
+                    <td class="border p-2">${r.vocab}</td>
+                    <td class="border p-2">${r.grammar}</td>
+                    <td class="border p-2">${r.listening}</td>
+                    <td class="border p-2">${r.kaiwa}</td>
+                    <td class="border p-2">${r.avg.toFixed(2)}</td>
+                    <td class="border p-2">${r.rank} (${r.symbol})</td>
+                </tr>
+            `).join('');
+
+            // Hiển thị kết quả và biểu đồ
+            document.getElementById('results').classList.remove('hidden');
+            document.getElementById('charts').classList.remove('hidden');
+
+            // Vẽ biểu đồ
+            const ctxBar = document.getElementById('barChart').getContext('2d');
+            if (window.barChart) window.barChart.destroy();
+            window.barChart = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: ['1-6', '7-12', '13-18', '19-25', '26-30'],
+                    datasets: [
+                        {
+                            label: 'Từ vựng',
+                            data: report.scores.vocab,
+                            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Ngữ pháp',
+                            data: report.scores.grammar,
+                            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Nghe',
+                            data: report.scores.listening,
+                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Kaiwa',
+                            data: report.scores.kaiwa,
+                            backgroundColor: 'rgba(255, 206, 86, 0.5)',
+                            borderColor: 'rgba(255, 206, 86, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    }
+                }
+            });
+
+            const ctxRadar = document.getElementById('radarChart').getContext('2d');
+            if (window.radarChart) window.cập nhật dữ liệuradarChart.destroy();
+            window.radarChart = new Chart(ctxRadar, {
+                type: 'radar',
+                data: {
+                    labels: ['Từ vựng', 'Ngữ pháp', 'Nghe', 'Kaiwa'],
+                    datasets: ['1-6', '7-12', '13-18', '19-25', '26-30'].map((group, index) => ({
+                        label: group,
+                        data: [report.scores.vocab[index], report.scores.grammar[index], report.scores.listening[index], report.scores.kaiwa[index]],
+                        fill: true,
+                        backgroundColor: `rgba(${index * 50}, 99, 132, 0.2)`,
+                        borderColor: `rgba(${index * 50}, 99, 132, 1)`,
+                        pointBackgroundColor: `rgba(${index * 50}, 99, 132, 1)`,
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: `rgba(${index * 50}, 99, 132, 1)`
+                    }))
+                },
+                options: {
+                    scales: {
+                        r: { angleLines: { display: false }, suggestedMin: 0, suggestedMax: 100 }
+                    }
+                }
+            });
+        }
+
+        // Tải lịch sử khi trang được tải
+        document.addEventListener('DOMContentLoaded', loadHistory);
+    </script>
+</body>
+</html>
