@@ -6,6 +6,9 @@
     <title>Báo cáo kết quả học viên</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Firebase SDK v9 with Compatibility Layer -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body class="bg-gray-100 font-sans">
     <div class="container mx-auto p-6">
@@ -15,8 +18,8 @@
         <div class="bg-white p-6 rounded-lg shadow-md mb-6">
             <h2 class="text-xl font-semibold mb-4">Thông tin học viên</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <input id="fullName" type="text" placeholder="Họ và Tên" class="border p-2 rounded">
-                <input id="class" type="text" placeholder="Lớp" class="border p-2 rounded">
+                <input id="fullName" type="text" placeholder="Họ và Tên" class="border p-2 rounded" required>
+                <input id="class" type="text" placeholder="Lớp" class="border p-2 rounded" required>
                 <input id="company" type="text" placeholder="Tên Công ty" class="border p-2 rounded">
                 <input id="union" type="text" placeholder="Nghiệp Đoàn" class="border p-2 rounded">
                 <input id="xkld" type="text" placeholder="XKLD" class="border p-2 rounded">
@@ -29,7 +32,7 @@
             <div class="space-y-4">
                 <!-- Nhóm bài 1-6 -->
                 <div>
-                    <h3 class="font-medium">Bài 1-6</h cập nhật dữ liệu3>
+                    <h3 class="font-medium">Bài 1-6</h3>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <input type="number" min="0" max="100" placeholder="Từ vựng" class="border p-2 rounded" id="vocab1">
                         <input type="number" min="0" max="100" placeholder="Ngữ pháp Đọc hiểu" class="border p-2 rounded" id="grammar1">
@@ -44,7 +47,7 @@
                         <input type="number" min="0" max="100" placeholder="Từ vựng" class="border p-2 rounded" id="vocab2">
                         <input type="number" min="0" max="100" placeholder="Ngữ pháp Đọc hiểu" class="border p-2 rounded" id="grammar2">
                         <input type="number" min="0" max="100" placeholder="Nghe" class="border p-2 rounded" id="listening2">
-                                                <input type="number" min="0" max="100" placeholder="Kaiwa" class="border p-2 rounded" id="kaiwa2">
+                        <input type="number" min="0" max="100" placeholder="Kaiwa" class="border p-2 rounded" id="kaiwa2">
                     </div>
                 </div>
                 <!-- Nhóm bài 13-18 -->
@@ -108,7 +111,7 @@
         </div>
 
         <!-- Biểu đồ -->
-        <div class="bg-white p-6 rounded-lg shadow-md mt-6">
+        <div id="charts" class="bg-white p-6 rounded-lg shadow-md mt-6 hidden">
             <h2 class="text-xl font-semibold mb-4">Phân tích kết quả</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -122,54 +125,77 @@
     </div>
 
     <script>
-        let currentReportId = null;
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAfy4QMD9_7PyFHpInNdKDRWuW4AYCtLJ4",
+            authDomain: "history-e4633.firebaseapp.com",
+            projectId: "history-e4633",
+            storageBucket: "history-e4633.firebasestorage.app",
+            messagingSenderId: "331974436893",
+            appId: "1:331974436893:web:10c3c6adf7b66d2b5fbef4",
+            measurementId: "G-DC055090BW"
+        };
 
-        // Hàm tạo UUID đơn giản
-        function generateUUID() {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
+        try {
+            firebase.initializeApp(firebaseConfig);
+        } catch (error) {
+            console.error('Firebase initialization failed:', error);
+            alert('Không thể kết nối với cơ sở dữ liệu. Vui lòng thử lại sau.');
         }
 
-        // Hàm hỗ trợ lấy giá trị input
+        const db = firebase.firestore();
+
+        let currentReportId = null;
+
+        // Hàm lấy giá trị input
         function getInputValue(id) {
             const element = document.getElementById(id);
-            return element && !isNaN(parseFloat(element.value)) ? parseFloat(element.value) : 0;
+            const value = parseFloat(element.value);
+            return element && !isNaN(value) && value >= 0 && value <= 100 ? value : 0;
         }
 
         // Hàm lấy giá trị văn bản
         function getTextValue(id) {
             const element = document.getElementById(id);
-            return element ? element.value : '';
+            return element ? element.value.trim() : '';
         }
 
-        // Hàm lưu báo cáo vào localStorage
-        function saveReport(report) {
-            const reports = JSON.parse(localStorage.getItem('reports') || '[]');
-            if (currentReportId) {
-                const index = reports.findIndex(r => r.id === currentReportId);
-                if (index !== -1) {
-                    reports[index] = report;
+        // Hàm lưu báo cáo vào Firestore
+        async function saveReport(report) {
+            try {
+                if (currentReportId) {
+                    // Update existing report
+                    await db.collection('testHistorybaocao').doc(currentReportId).set(report);
+                    alert('Báo cáo đã được cập nhật thành công!');
+                } else {
+                    // Create new report
+                    const docRef = await db.collection('testHistorybaocao').add(report);
+                    currentReportId = docRef.id;
+                    alert('Báo cáo đã được lưu thành công!');
                 }
-            } else {
-                report.id = generateUUID();
-                reports.push(report);
+            } catch (error) {
+                console.error('Error saving report:', error);
+                alert('Có lỗi khi lưu báo cáo.');
             }
-            localStorage.setItem('reports', JSON.stringify(reports));
         }
 
         // Hàm chỉnh sửa kết quả hiện tại
         function editResults() {
             document.getElementById('results').classList.add('hidden');
-            // Form đã được điền sẵn dữ liệu từ báo cáo hiện tại
+            document.getElementById('charts').classList.add('hidden');
         }
 
         // Hàm tính toán và hiển thị kết quả
-        function calculateResults() {
-            // Lấy thông tin học viên
+        async function calculateResults() {
+            // Input validation
             const fullName = getTextValue('fullName');
             const className = getTextValue('class');
+            if (!fullName || !className) {
+                alert('Vui lòng nhập đầy đủ Họ và Tên và Lớp.');
+                return;
+            }
+
+            // Lấy thông tin học viên
             const company = getTextValue('company');
             const union = getTextValue('union');
             const xkld = getTextValue('xkld');
@@ -232,10 +258,14 @@
             };
 
             // Lưu báo cáo
-            saveReport(report);
+            await saveReport(report);
 
             // Hiển thị kết quả
             displayResults(report);
+
+            // Clear form
+            document.querySelectorAll('input').forEach(input => input.value = '');
+            currentReportId = null;
         }
 
         // Hàm hiển thị kết quả
@@ -263,8 +293,9 @@
                 </tr>
             `).join('');
 
-            // Hiển thị kết quả
+            // Hiển thị kết quả và biểu đồ
             document.getElementById('results').classList.remove('hidden');
+            document.getElementById('charts').classList.remove('hidden');
 
             // Vẽ biểu đồ
             const ctxBar = document.getElementById('barChart').getContext('2d');
@@ -336,6 +367,36 @@
                 }
             });
         }
+
+        // Load report for editing
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const editId = urlParams.get('edit');
+            if (editId) {
+                try {
+                    const doc = await db.collection('testHistorybaocao').doc(editId).get();
+                    if (doc.exists) {
+                        const report = doc.data();
+                        currentReportId = editId;
+                        document.getElementById('fullName').value = report.fullName;
+                        document.getElementById('class').value = report.className;
+                        document.getElementById('company').value = report.company;
+                        document.getElementById('union').value = report.union;
+                        document.getElementById('xkld').value = report.xkld;
+                        ['vocab', 'grammar', 'listening', 'kaiwa'].forEach((category, i) => {
+                            for (let j = 1; j <= 5; j++) {
+                                document.getElementById(`${category}${j}`).value = report.scores[category][j - 1];
+                            }
+                        });
+                    } else {
+                        alert('Báo cáo không tồn tại.');
+                    }
+                } catch (error) {
+                    console.error('Error loading report:', error);
+                    alert('Có lỗi khi tải báo cáo.');
+                }
+            }
+        });
     </script>
 </body>
 </html>
