@@ -6,12 +6,15 @@
     <title>Lịch sử báo cáo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Firebase SDK v9 with Compatibility Layer -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body class="bg-gray-100 font-sans">
     <div class="container mx-auto p-6">
         <h1 class="text-3xl font-bold text-center mb-6">Lịch sử Báo cáo</h1>
 
-        <!-- Bảng lịch sử báo cáo -->
+        <!-- Danh sách báo cáo -->
         <div class="bg-white p-6 rounded-lg shadow-md mb-6">
             <h2 class="text-xl font-semibold mb-4">Danh sách báo cáo</h2>
             <table class="w-full border-collapse border">
@@ -26,7 +29,7 @@
                 <tbody id="historyTable"></tbody>
             </table>
             <div class="mt-4">
-                <a href="index.html" class="bg-blue-500 text W-white px-4 py-2 rounded hover:bg-blue-600">Quay lại nhập liệu</a>
+                <a href="index.html" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Quay lại nhập liệu</a>
             </div>
         </div>
 
@@ -65,35 +68,82 @@
     </div>
 
     <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAfy4QMD9_7PyFHpInNdKDRWuW4AYCtLJ4",
+            authDomain: "history-e4633.firebaseapp.com",
+            projectId: "history-e4633",
+            storageBucket: "history-e4633.firebasestorage.app",
+            messagingSenderId: "331974436893",
+            appId: "1:331974436893:web:10c3c6adf7b66d2b5fbef4",
+            measurementId: "G-DC055090BW"
+        };
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+        } catch (error) {
+            console.error('Firebase initialization failed:', error);
+            alert('Không thể kết nối với cơ sở dữ liệu. Vui lòng thử lại sau.');
+        }
+
+        const db = firebase.firestore();
+
         // Hàm tải lịch sử báo cáo
-        function loadHistory() {
-            const reports = JSON.parse(localStorage.getItem('reports') || '[]');
-            const historyTable = document.getElementById('historyTable');
-            historyTable.innerHTML = reports.map(report => `
-                <tr>
-                    <td class="border p-2">${report.fullName}</td>
-                    <td class="border p-2">${report.className}</td>
-                    <td class="border p-2">${new Date(report.timestamp).toLocaleString('vi-VN')}</td>
-                    <td class="border p-2">
-                        <button onclick="viewReport('${report.id}')" class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">Xem</button>
-                        <a href="index.html?edit=${report.id}" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">Chỉnh sửa</a>
-                    </td>
-                </tr>
-            `).join('');
+        async function loadHistory() {
+            try {
+                const snapshot = await db.collection('testHistorybaocao').orderBy('timestamp', 'desc').get();
+                const reports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const historyTable = document.getElementById('historyTable');
+                historyTable.innerHTML = reports.map(report => `
+                    <tr>
+                        <td class="border p-2">${report.fullName}</td>
+                        <td class="border p-2">${report.className}</td>
+                        <td class="border p-2">${new Date(report.timestamp).toLocaleString('vi-VN')}</td>
+                        <td class="border p-2">
+                            <button onclick="viewReport('${report.id}')" class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">Xem</button>
+                            <a href="index.html?edit=${report.id}" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">Chỉnh sửa</a>
+                            <button onclick="deleteReport('${report.id}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Xóa</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading history:', error);
+                alert('Có lỗi khi tải lịch sử báo cáo.');
+            }
+        }
+
+        // Hàm xóa báo cáo
+        async function deleteReport(id) {
+            if (confirm('Bạn có chắc muốn xóa báo cáo này?')) {
+                try {
+                    await db.collection('testHistorybaocao').doc(id).delete();
+                    loadHistory();
+                    alert('Báo cáo đã được xóa thành công!');
+                } catch (error) {
+                    console.error('Error deleting report:', error);
+                    alert('Có lỗi khi xóa báo cáo.');
+                }
+            }
         }
 
         // Hàm xem báo cáo
-        function viewReport(id) {
-            const reports = JSON.parse(localStorage.getItem('reports') || '[]');
-            const report = reports.find(r => r.id === id);
-            if (report) {
-                displayResults(report);
+        async function viewReport(id) {
+            try {
+                const doc = await db.collection('testHistorybaocao').doc(id).get();
+                if (doc.exists) {
+                    const report = { id: doc.id, ...doc.data() };
+                    displayResults(report);
+                } else {
+                    alert('Báo cáo không tồn tại.');
+                }
+            } catch (error) {
+                console.error('Error viewing report:', error);
+                alert('Có lỗi khi xem báo cáo.');
             }
         }
 
         // Hàm hiển thị kết quả
         function displayResults(report) {
-            // Hiển thị thông tin học viên
             document.getElementById('studentInfo').innerHTML = `
                 <p><strong>Họ và Tên:</strong> ${report.fullName}</p>
                 <p><strong>Lớp:</strong> ${report.className}</p>
@@ -101,8 +151,6 @@
                 <p><strong>Nghiệp đoàn:</strong> ${report.union}</p>
                 <p><strong>XKLD:</strong> ${report.xkld}</p>
             `;
-
-            // Hiển thị bảng kết quả
             const resultTable = document.getElementById('resultTable');
             resultTable.innerHTML = report.results.map(r => `
                 <tr>
@@ -115,12 +163,8 @@
                     <td class="border p-2">${r.rank} (${r.symbol})</td>
                 </tr>
             `).join('');
-
-            // Hiển thị kết quả và biểu đồ
             document.getElementById('results').classList.remove('hidden');
             document.getElementById('charts').classList.remove('hidden');
-
-            // Vẽ biểu đồ
             const ctxBar = document.getElementById('barChart').getContext('2d');
             if (window.barChart) window.barChart.destroy();
             window.barChart = new Chart(ctxBar, {
@@ -164,9 +208,8 @@
                     }
                 }
             });
-
             const ctxRadar = document.getElementById('radarChart').getContext('2d');
-            if (window.radarChart) window.cập nhật dữ liệuradarChart.destroy();
+            if (window.radarChart) window.radarChart.destroy();
             window.radarChart = new Chart(ctxRadar, {
                 type: 'radar',
                 data: {
