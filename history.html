@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lịch sử báo cáo</title>
+    <title>Lịch sử Báo cáo</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Firebase SDK v9 with Compatibility Layer -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
@@ -68,7 +67,7 @@
     </div>
 
     <script>
-        // Initialize Firebase
+        // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyAfy4QMD9_7PyFHpInNdKDRWuW4AYCtLJ4",
             authDomain: "history-e4633.firebaseapp.com",
@@ -79,163 +78,322 @@
             measurementId: "G-DC055090BW"
         };
 
+        // Initialize Firebase
+        let db;
         try {
             firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
         } catch (error) {
-            console.error('Firebase initialization failed:', error);
-            alert('Không thể kết nối với cơ sở dữ liệu. Vui lòng thử lại sau.');
+            console.error('Firebase initialization failed:', error.message, error.stack);
+            alert('Không thể kết nối với cơ sở dữ liệu: ' + error.message);
         }
 
-        const db = firebase.firestore();
-
-        // Hàm tải lịch sử báo cáo
+        // Load report history
         async function loadHistory() {
+            if (!db) {
+                alert('Cơ sở dữ liệu không khả dụng.');
+                return;
+            }
             try {
                 const snapshot = await db.collection('testHistorybaocao').orderBy('timestamp', 'desc').get();
-                const reports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 const historyTable = document.getElementById('historyTable');
-                historyTable.innerHTML = reports.map(report => `
-                    <tr>
-                        <td class="border p-2">${report.fullName}</td>
-                        <td class="border p-2">${report.className}</td>
-                        <td class="border p-2">${new Date(report.timestamp).toLocaleString('vi-VN')}</td>
-                        <td class="border p-2">
-                            <button onclick="viewReport('${report.id}')" class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">Xem</button>
-                            <a href="index.html?edit=${report.id}" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">Chỉnh sửa</a>
-                            <button onclick="deleteReport('${report.id}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Xóa</button>
-                        </td>
-                    </tr>
-                `).join('');
+                if (!historyTable) throw new Error('History table element not found');
+                historyTable.innerHTML = snapshot.docs.map(doc => {
+                    const report = { id: doc.id, ...doc.data() };
+                    let timestamp = 'N/A';
+                    try {
+                        if (report.timestamp) {
+                            if (typeof report.timestamp === 'number') {
+                                timestamp = new Date(report.timestamp).toLocaleString('vi-VN');
+                            } else if (report.timestamp.toDate) {
+                                timestamp = report.timestamp.toDate().toLocaleString('vi-VN');
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Invalid timestamp format:', report.timestamp, e);
+                    }
+                    return `
+                        <tr>
+                            <td class="border p-2">${report.fullName || 'N/A'}</td>
+                            <td class="border p-2">${report.className || 'N/A'}</td>
+                            <td class="border p-2">${timestamp}</td>
+                            <td class="border p-2">
+                                <button onclick="viewReport('${report.id}')" class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">Xem</button>
+                                <a href="index.html?edit=${report.id}" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">Chỉnh sửa</a>
+                                <button onclick="deleteReport('${report.id}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Xóa</button>
+                            </td>
+                        </tr>
+                   `;
+                }).join('');
             } catch (error) {
-                console.error('Error loading history:', error);
-                alert('Có lỗi khi tải lịch sử báo cáo.');
+                console.error('Error loading history:', error.message, error.stack);
+                alert('Có lỗi khi tải lịch sử báo cáo: ' + error.message);
             }
         }
 
-        // Hàm xóa báo cáo
+        // Delete report
         async function deleteReport(id) {
+            if (!db) {
+                alert('Cơ sở dữ liệu không khả dụng.');
+                return;
+            }
             if (confirm('Bạn có chắc muốn xóa báo cáo này?')) {
                 try {
                     await db.collection('testHistorybaocao').doc(id).delete();
-                    loadHistory();
                     alert('Báo cáo đã được xóa thành công!');
+                    loadHistory();
                 } catch (error) {
-                    console.error('Error deleting report:', error);
-                    alert('Có lỗi khi xóa báo cáo.');
+                    console.error('Error deleting report:', error.message, error.stack);
+                    alert('Có lỗi khi xóa báo cáo: ' + error.message);
                 }
             }
         }
 
-        // Hàm xem báo cáo
+        // View report
         async function viewReport(id) {
+            if (!db) {
+                alert('Cơ sở dữ liệu không khả dụng.');
+                return;
+            }
             try {
                 const doc = await db.collection('testHistorybaocao').doc(id).get();
-                if (doc.exists) {
-                    const report = { id: doc.id, ...doc.data() };
-                    displayResults(report);
-                } else {
+                if (!doc.exists) {
                     alert('Báo cáo không tồn tại.');
+                    return;
                 }
+                const report = { id: doc.id, ...doc.data() };
+
+                // Validate report data
+                if (!report.results || !Array.isArray(report.results)) {
+                    console.warn('Invalid results data, using empty array:', report.results);
+                    report.results = [];
+                }
+                if (!report.scores || typeof report.scores !== 'object') {
+                    console.warn('Invalid scores data, using default:', report.scores);
+                    report.scores = {
+                        vocab: [0, 0, 0, 0, 0],
+                        grammar: [0, 0, 0, 0, 0],
+                        listening: [0, 0, 0, 0, 0],
+                        kaiwa: [0, 0, 0, 0, 0]
+                    };
+                }
+
+                displayResults(report);
             } catch (error) {
-                console.error('Error viewing report:', error);
-                alert('Có lỗi khi xem báo cáo.');
+                console.error('Error viewing report:', error.message, error.stack);
+                alert('Có lỗi khi xem báo cáo: ' + (error.message || 'Không xác định'));
             }
         }
 
-        // Hàm hiển thị kết quả
+        // Display results and charts
         function displayResults(report) {
-            document.getElementById('studentInfo').innerHTML = `
-                <p><strong>Họ và Tên:</strong> ${report.fullName}</p>
-                <p><strong>Lớp:</strong> ${report.className}</p>
-                <p><strong>Công ty:</strong> ${report.company}</p>
-                <p><strong>Nghiệp đoàn:</strong> ${report.union}</p>
-                <p><strong>XKLD:</strong> ${report.xkld}</p>
-            `;
-            const resultTable = document.getElementById('resultTable');
-            resultTable.innerHTML = report.results.map(r => `
-                <tr>
-                    <td class="border p-2">${r.group}</td>
-                    <td class="border p-2">${r.vocab}</td>
-                    <td class="border p-2">${r.grammar}</td>
-                    <td class="border p-2">${r.listening}</td>
-                    <td class="border p-2">${r.kaiwa}</td>
-                    <td class="border p-2">${r.avg.toFixed(2)}</td>
-                    <td class="border p-2">${r.rank} (${r.symbol})</td>
-                </tr>
-            `).join('');
-            document.getElementById('results').classList.remove('hidden');
-            document.getElementById('charts').classList.remove('hidden');
-            const ctxBar = document.getElementById('barChart').getContext('2d');
-            if (window.barChart) window.barChart.destroy();
-            window.barChart = new Chart(ctxBar, {
-                type: 'bar',
-                data: {
-                    labels: ['1-6', '7-12', '13-18', '19-25', '26-30'],
-                    datasets: [
-                        {
-                            label: 'Từ vựng',
-                            data: report.scores.vocab,
-                            backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 1
+            try {
+                // Log report data for debugging
+                console.log('Processing report:', report);
+
+                // Validate DOM elements
+                const studentInfo = document.getElementById('studentInfo');
+                const resultTable = document.getElementById('resultTable');
+                const resultsSection = document.getElementById('results');
+                const chartsSection = document.getElementById('charts');
+                if (!studentInfo) throw new Error('Student info element not found');
+                if (!resultTable) throw new Error('Result table element not found');
+                if (!resultsSection) throw new Error('Results section not found');
+                if (!chartsSection) throw new Error('Charts section not found');
+
+                // Display student info
+                studentInfo.innerHTML = `
+                    <p><strong>Họ và Tên:</strong> ${report.fullName || 'N/A'}</p>
+                    <p><strong>Lớp:</strong> ${report.className || 'N/A'}</p>
+                    <p><strong>Công ty:</strong> ${report.company || 'N/A'}</p>
+                    <p><strong>Nghiệp đoàn:</strong> ${report.union || 'N/A'}</p>
+                    <p><strong>XKLD:</strong> ${report.xkld || 'N/A'}</p>
+                `;
+
+                // Display results table
+                resultTable.innerHTML = (report.results || []).map((r, index) => {
+                    try {
+                        const validated = {
+                            group: typeof r.group === 'string' && r.group ? r.group : `Nhóm ${index + 1}`,
+                            vocab: typeof r.vocab === 'number' && !isNaN(r.vocab) ? r.vocab : 0,
+                            grammar: typeof r.grammar === 'number' && !isNaN(r.grammar) ? r.grammar : 0,
+                            listening: typeof r.listening === 'number' && !isNaN(r.listening) ? r.listening : 0,
+                            kaiwa: typeof r.kaiwa === 'number' && !isNaN(r.kaiwa) ? r.kaiwa : 0,
+                            avg: typeof r.avg === 'number' && !isNaN(r.avg) ? r.avg.toFixed(2) : 'N/A',
+                            rank: typeof r.rank === 'string' && r.rank ? r.rank : 'N/A',
+                            symbol: typeof r.symbol === 'string' && r.symbol ? r.symbol : 'N/A'
+                        };
+                        return `
+                            <tr>
+                                <td class="border p-2">${validated.group}</td>
+                                <td class="border p-2">${validated.vocab}</td>
+                                <td class="border p-2">${validated.grammar}</td>
+                                <td class="border p-2">${validated.listening}</td>
+                                <td class="border p-2">${validated.kaiwa}</td>
+                                <td class="border p-2">${validated.avg}</td>
+                                <td class="border p-2">${validated.rank} (${validated.symbol})</td>
+                            </tr>
+                        `;
+                    } catch (e) {
+                        console.warn(`Invalid result entry at index ${index}:`, r, e.message, e.stack);
+                        return '';
+                    }
+                }).filter(row => row).join('');
+
+                // Show results and charts sections
+                resultsSection.classList.remove('hidden');
+                chartsSection.classList.remove('hidden');
+
+                // Destroy existing charts if they exist
+                if (window.barChart) {
+                    try {
+                        window.barChart.destroy();
+                    } catch (e) {
+                        console.warn('Error destroying bar chart:', e.message, e.stack);
+                    }
+                    window.barChart = null;
+                }
+                if (window.radarChart) {
+                    try {
+                        window.radarChart.destroy();
+                    } catch (e) {
+                        console.warn('Error destroying radar chart:', e.message, e.stack);
+                    }
+                    window.radarChart = null;
+                }
+
+                // Prepare data for charts
+                const groups = ['1-6', '7-12', '13-18', '19-25', '26-30'];
+                const defaultScores = [0, 0, 0, 0, 0];
+                const scores = {
+                    vocab: Array.isArray(report.scores.vocab) && report.scores.vocab.length === 5
+                        ? report.scores.vocab.map(val => (typeof val === 'number' && !isNaN(val) ? val : 0))
+                        : defaultScores,
+                    grammar: Array.isArray(report.scores.grammar) && report.scores.grammar.length === 5
+                        ? report.scores.grammar.map(val => (typeof val === 'number' && !isNaN(val) ? val : 0))
+                        : defaultScores,
+                    listening: Array.isArray(report.scores.listening) && report.scores.listening.length === 5
+                        ? report.scores.listening.map(val => (typeof val === 'number' && !isNaN(val) ? val : 0))
+                        : defaultScores,
+                    kaiwa: Array.isArray(report.scores.kaiwa) && report.scores.kaiwa.length === 5
+                        ? report.scores.kaiwa.map(val => (typeof val === 'number' && !isNaN(val) ? val : 0))
+                        : defaultScores
+                };
+                console.log('Prepared scores for charts:', scores);
+
+                // Bar Chart
+                try {
+                    const barCanvas = document.getElementById('barChart');
+                    if (!barCanvas) throw new Error('Bar chart canvas not found');
+                    const ctxBar = barCanvas.getContext('2d');
+                    if (!ctxBar) throw new Error('Bar chart context not available');
+                    window.barChart = new Chart(ctxBar, {
+                        type: 'bar',
+                        data: {
+                            labels: groups,
+                            datasets: [
+                                {
+                                    label: 'Từ vựng',
+                                    data: scores.vocab,
+                                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                                    borderColor: 'rgba(75, 192, 192, 1)',
+                                    borderWidth: 1
+                                },
+                                {
+                                    label: 'Ngữ pháp',
+                                    data: scores.grammar,
+                                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                                    borderColor: 'rgba(255, 99, 132, 1)',
+                                    borderWidth: 1
+                                },
+                                {
+                                    label: 'Nghe',
+                                    data: scores.listening,
+                                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                                    borderColor: 'rgba(54, 162, 235, 1)',
+                                    borderWidth: 1
+                                },
+                                {
+                                    label: 'Kaiwa',
+                                    data: scores.kaiwa,
+                                    backgroundColor: 'rgba(255, 206, 86, 0.5)',
+                                    borderColor: 'rgba(255, 206, 86, 1)',
+                                    borderWidth: 1
+                                }
+                            ]
                         },
-                        {
-                            label: 'Ngữ pháp',
-                            data: report.scores.grammar,
-                            backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            borderWidth: 1
-                        },
-                        {
-                            label: 'Nghe',
-                            data: report.scores.listening,
-                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            borderWidth: 1
-                        },
-                        {
-                            label: 'Kaiwa',
-                            data: report.scores.kaiwa,
-                            backgroundColor: 'rgba(255, 206, 86, 0.5)',
-                            borderColor: 'rgba(255, 206, 86, 1)',
-                            borderWidth: 1
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: { beginAtZero: true, max: 100, title: { display: true, text: 'Điểm' } },
+                                x: { title: { display: true, text: 'Nhóm bài' } }
+                            },
+                            plugins: { legend: { position: 'top' } }
                         }
-                    ]
-                },
-                options: {
-                    scales: {
-                        y: { beginAtZero: true, max: 100 }
-                    }
+                    });
+                    console.log('Bar chart created successfully');
+                } catch (chartError) {
+                    console.error('Error creating bar chart:', chartError.message, chartError.stack);
                 }
-            });
-            const ctxRadar = document.getElementById('radarChart').getContext('2d');
-            if (window.radarChart) window.radarChart.destroy();
-            window.radarChart = new Chart(ctxRadar, {
-                type: 'radar',
-                data: {
-                    labels: ['Từ vựng', 'Ngữ pháp', 'Nghe', 'Kaiwa'],
-                    datasets: ['1-6', '7-12', '13-18', '19-25', '26-30'].map((group, index) => ({
-                        label: group,
-                        data: [report.scores.vocab[index], report.scores.grammar[index], report.scores.listening[index], report.scores.kaiwa[index]],
-                        fill: true,
-                        backgroundColor: `rgba(${index * 50}, 99, 132, 0.2)`,
-                        borderColor: `rgba(${index * 50}, 99, 132, 1)`,
-                        pointBackgroundColor: `rgba(${index * 50}, 99, 132, 1)`,
-                        pointBorderColor: '#fff',
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: `rgba(${index * 50}, 99, 132, 1)`
-                    }))
-                },
-                options: {
-                    scales: {
-                        r: { angleLines: { display: false }, suggestedMin: 0, suggestedMax: 100 }
-                    }
+
+                // Radar Chart
+                try {
+                    const radarCanvas = document.getElementById('radarChart');
+                    if (!radarCanvas) throw new Error('Radar chart canvas not found');
+                    const ctxRadar = radarCanvas.getContext('2d');
+                    if (!ctxRadar) throw new Error('Radar chart context not available');
+                    window.radarChart = new Chart(ctxRadar, {
+                        type: 'radar',
+                        data: {
+                            labels: ['Từ vựng', 'Ngữ pháp', 'Nghe', 'Kaiwa'],
+                            datasets: groups.map((group, index) => ({
+                                label: group,
+                                data: [
+                                    scores.vocab[index] || 0,
+                                    scores.grammar[index] || 0,
+                                    scores.listening[index] || 0,
+                                    scores.kaiwa[index] || 0
+                                ],
+                                fill: true,
+                                backgroundColor: `rgba(${index * 50}, 99, 132, 0.2)`,
+                                borderColor: `rgba(${index * 50}, 99, 132, 1)`,
+                                pointBackgroundColor: `rgba(${index * 50}, 99, 132, 1)`,
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: `rgba(${index * 50}, 99, 132, 1)`
+                            }))
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                r: { min: 0, max: 100, ticks: { stepSize: 20 } }
+                            },
+                            plugins: { legend: { position: 'top' } }
+                        }
+                    });
+                    console.log('Radar chart created successfully');
+                } catch (chartError) {
+                    console.error('Error creating radar chart:', chartError.message, chartError.stack);
                 }
-            });
+            } catch (error) {
+                console.error('Error displaying results:', error.message, error.stack);
+                alert('Có lỗi khi hiển thị kết quả: ' + (error.message || 'Không xác định'));
+                throw error; // Re-throw to ensure error is visible in console
+            }
         }
 
-        // Tải lịch sử khi trang được tải
-        document.addEventListener('DOMContentLoaded', loadHistory);
+        // Load history on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                if (db) {
+                    loadHistory();
+                } else {
+                    console.warn('Firestore not initialized. Skipping loadHistory.');
+                }
+            } catch (error) {
+                console.error('Error during page load:', error.message, error.stack);
+            }
+        });
     </script>
 </body>
 </html>
