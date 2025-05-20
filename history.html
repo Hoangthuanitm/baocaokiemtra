@@ -8,6 +8,48 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <style>
+        /* Custom styles for table column widths and header text wrapping */
+        .table-auto th, .table-auto td {
+            text-align: center;
+            vertical-align: middle;
+        }
+        .col-time {
+            min-width: 120px;
+            max-width: 150px;
+        }
+        .col-name {
+            min-width: 150px;
+            max-width: 200px;
+        }
+        .col-class {
+            min-width: 100px;
+            max-width: 150px;
+        }
+        .col-score {
+            min-width: 80px;
+            max-width: 120px;
+        }
+        .col-ratio {
+            min-width: 80px;
+            max-width: 100px;
+        }
+        .col-status {
+            min-width: 100px;
+            max-width: 120px;
+        }
+        .col-actions {
+            min-width: 200px;
+            max-width: 250px;
+        }
+        .col-grammar-header br {
+            display: block;
+        }
+        .col-grammar-header {
+            line-height: 1.2;
+            padding: 0.5rem;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 font-sans">
     <div class="container mx-auto p-6">
@@ -18,21 +60,27 @@
             <h2 class="text-xl font-semibold mb-4">Danh sách báo cáo</h2>
             <!-- Khung tìm kiếm -->
             <div class="mb-4">
+                <label for="searchInput" class="sr-only">Tìm kiếm theo Họ và Tên hoặc Lớp</label>
                 <input type="text" id="searchInput" class="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Tìm kiếm theo Họ và Tên hoặc Lớp...">
             </div>
-            <table class="w-full border-collapse border">
-                <thead>
-                    <tr class="bg-gray-200">
-                        <th class="border p-2">Thời gian</th>
-                        <th class="border p-2">Họ và Tên</th>
-                        <th class="border p-2">Lớp</th>
-                        <th class="border p-2">Tỉ lệ</th>
-                        <th class="border p-2">Kết quả</th>
-                        <th class="border p-2">Thao tác</th>
-                    </tr>
-                </thead>
-                <tbody id="historyTable"></tbody>
-            </table>
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse border table-auto">
+                    <thead>
+                        <tr class="bg-gray-200">
+                            <th scope="col" class="border p-2 col-time">Thời gian</th>
+                            <th scope="col" class="border p-2 col-name">Họ và Tên</th>
+                            <th scope="col" class="border p-2 col-class">Lớp</th>
+                            <th scope="col" class="border p-2 col-score">Từ vựng</th>
+                            <th scope="col" class="border p-2 col-score col-grammar-header">Ngữ pháp -<br>Đọc hiểu</th>
+                            <th scope="col" class="border p-2 col-score">Nghe</th>
+                            <th scope="col" class="border p-2 col-ratio">Tỉ lệ</th>
+                            <th scope="col" class="border p-2 col-status">Kết quả</th>
+                            <th scope="col" class="border p-2 col-actions">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTable"></tbody>
+                </table>
+            </div>
             <div class="mt-4">
                 <a href="index.html" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Quay lại nhập liệu</a>
             </div>
@@ -46,12 +94,12 @@
             <table class="w-full border-collapse border">
                 <thead>
                     <tr class="bg-gray-200">
-                        <th class="border p-2">Nhóm bài</th>
-                        <th class="border p-2">Từ vựng</th>
-                        <th class="border p-2">Ngữ pháp</th>
-                        <th class="border p-2">Nghe</th>
-                        <th class="border p-2">Trung bình</th>
-                        <th class="border p-2">Xếp loại</th>
+                        <th scope="col" class="border p-2">Nhóm bài</th>
+                        <th scope="col" class="border p-2">Từ vựng</th>
+                        <th scope="col" class="border p-2">Ngữ pháp</th>
+                        <th scope="col" class="border p-2">Nghe</th>
+                        <th scope="col" class="border p-2">Trung bình</th>
+                        <th scope="col" class="border p-2">Xếp loại</th>
                     </tr>
                 </thead>
                 <tbody id="resultTable"></tbody>
@@ -115,6 +163,15 @@
             return `${Math.round(avg)}%`;
         }
 
+        // Hàm tính điểm trung bình cho một kỹ năng
+        function calculateSkillAverage(results, skill) {
+            if (!results || !Array.isArray(results) || results.length === 0) return 'N/A';
+            const validResults = results.filter(r => typeof r[skill] === 'number' && !isNaN(r[skill]));
+            if (validResults.length === 0) return 'N/A';
+            const avg = validResults.reduce((sum, r) => sum + r[skill], 0) / validResults.length;
+            return `${Math.round(avg)}%`;
+        }
+
         // Load report history
         async function loadHistory(searchQuery = '') {
             if (!db) {
@@ -139,17 +196,20 @@
                 historyTable.innerHTML = reports.map(report => {
                     return `
                         <tr>
-                            <td class="border p-2">${formatDate(report.testDuration)}</td>
-                            <td class="border p-2">${report.fullName || 'N/A'}</td>
-                            <td class="border p-2">${report.className || 'N/A'}</td>
-                            <td class="border p-2">${calculateAverageRatio(report.results)}</td>
-                            <td class="border p-2 ${report.passStatus === 'Đạt' ? 'bg-green-100' : report.passStatus === 'Không đạt' ? 'bg-red-100' : ''}">
+                            <td class="border p-2 col-time">${formatDate(report.testDuration)}</td>
+                            <td class="border p-2 col-name">${report.fullName || 'N/A'}</td>
+                            <td class="border p-2 col-class">${report.className || 'N/A'}</td>
+                            <td class="border p-2 col-score">${calculateSkillAverage(report.results, 'vocab')}</td>
+                            <td class="border p-2 col-score">${calculateSkillAverage(report.results, 'grammar')}</td>
+                            <td class="border p-2 col-score">${calculateSkillAverage(report.results, 'listening')}</td>
+                            <td class="border p-2 col-ratio">${calculateAverageRatio(report.results)}</td>
+                            <td class="border p-2 col-status ${report.passStatus === 'Đạt' ? 'bg-green-100' : report.passStatus === 'Không đạt' ? 'bg-red-100' : ''}">
                                 ${report.passStatus || 'N/A'}
                             </td>
-                            <td class="border p-2">
-                                <button onclick="viewReport('${report.id}')" class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">Xem</button>
+                            <td class="border p-2 col-actions">
+                                <button onclick="viewReport('${report.id}')" class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600" aria-label="Xem báo cáo ${report.fullName || 'N/A'}">Xem</button>
                                 <a href="index.html?edit=${report.id}" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">Chỉnh sửa</a>
-                                <button onclick="deleteReport('${report.id}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Xóa</button>
+                                <button onclick="deleteReport('${report.id}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600" aria-label="Xóa báo cáo ${report.fullName || 'N/A'}">Xóa</button>
                             </td>
                         </tr>
                     `;
