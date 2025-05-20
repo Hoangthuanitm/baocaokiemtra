@@ -22,6 +22,8 @@
                         <th class="border p-2">Thời gian</th>
                         <th class="border p-2">Họ và Tên</th>
                         <th class="border p-2">Lớp</th>
+                        <th class="border p-2">Tỉ lệ</th>
+                        <th class="border p-2">Kết quả</th>
                         <th class="border p-2">Thao tác</th>
                     </tr>
                 </thead>
@@ -91,7 +93,6 @@
         // Hàm định dạng ngày
         function formatDate(isoString) {
             if (!isoString) return 'N/A';
-            // Handle non-ISO strings (e.g., previous text-based testDuration)
             if (!isoString.includes('T')) return isoString;
             const date = new Date(isoString);
             return date.toLocaleDateString('vi-VN', {
@@ -99,6 +100,15 @@
                 month: '2-digit',
                 day: '2-digit'
             });
+        }
+
+        // Hàm tính tỉ lệ trung bình
+        function calculateAverageRatio(results) {
+            if (!results || !Array.isArray(results) || results.length === 0) return 'N/A';
+            const validResults = results.filter(r => typeof r.avg === 'number' && !isNaN(r.avg));
+            if (validResults.length === 0) return 'N/A';
+            const avg = validResults.reduce((sum, r) => sum + r.avg, 0) / validResults.length;
+            return `${Math.round(avg)}%`;
         }
 
         // Load report history
@@ -118,6 +128,10 @@
                             <td class="border p-2">${formatDate(report.testDuration)}</td>
                             <td class="border p-2">${report.fullName || 'N/A'}</td>
                             <td class="border p-2">${report.className || 'N/A'}</td>
+                            <td class="border p-2">${calculateAverageRatio(report.results)}</td>
+                            <td class="border p-2 ${report.passStatus === 'Đạt' ? 'bg-green-100' : report.passStatus === 'Không đạt' ? 'bg-red-100' : ''}">
+                                ${report.passStatus || 'N/A'}
+                            </td>
                             <td class="border p-2">
                                 <button onclick="viewReport('${report.id}')" class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">Xem</button>
                                 <a href="index.html?edit=${report.id}" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">Chỉnh sửa</a>
