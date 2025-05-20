@@ -6,7 +6,6 @@
     <title>Báo cáo kết quả học viên</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-    <!-- Firebase SDK v9 with Compatibility Layer -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
@@ -24,65 +23,87 @@
                 <input id="union" type="text" placeholder="Nghiệp Đoàn" class="border p-2 rounded">
                 <input id="xkld" type="text" placeholder="XKLD" class="border p-2 rounded">
             </div>
+            <div class="mt-4 flex space-x-4">
+                <button onclick="showTestInputs()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Nhập điểm kiểm tra</button>
+                <button onclick="showAssignmentInputs()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Nhập điểm bài tập</button>
+                <a href="history.html" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Lịch sử báo cáo</a>
+            </div>
         </div>
 
-        <!-- Form Nhập điểm -->
-        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+        <!-- Form Nhập điểm kiểm tra -->
+        <div id="testInput" class="bg-white p-6 rounded-lg shadow-md mb-6 hidden">
+            <h2 class="text-xl font-semibold mb-4">Nhập điểm kiểm tra</h2>
+            <div class="grid grid-cols-1 gap-4 mb-4">
+                <select id="testName" class="border p-2 rounded" required>
+                    <option value="" disabled selected>Chọn tên bài kiểm tra</option>
+                    <option value="Nattest N5 online đề 1">Nattest N5 online đề 1</option>
+                    <option value="Nattest N5 online đề 2">Nattest N5 online đề 2</option>
+                    <option value="Nattest N4 online đề 1">Nattest N4 online đề 1</option>
+                    <option value="Nattest N4 online đề 2">Nattest N4 online đề 2</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <input type="number" min="0" max="100" placeholder="Từ vựng" class="border p-2 rounded" id="vocabTest">
+                <input type="number" min="0" max="100" placeholder="Ngữ pháp Đọc hiểu" class="border p-2 rounded" id="grammarTest">
+                <input type="number" min="0" max="100" placeholder="Nghe" class="border p-2 rounded" id="listeningTest">
+            </div>
+            <div class="mt-4">
+                <button onclick="calculateTestResults()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Cập nhật dữ liệu kiểm tra</button>
+            </div>
+        </div>
+
+        <!-- Form Nhập điểm bài tập -->
+        <div id="assignmentInput" class="bg-white p-6 rounded-lg shadow-md mb-6 hidden">
             <h2 class="text-xl font-semibold mb-4">Nhập điểm bài tập</h2>
             <div class="space-y-4">
                 <!-- Nhóm bài 1-6 -->
                 <div>
                     <h3 class="font-medium">Bài 1-6</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                         <input type="number" min="0" max="100" placeholder="Từ vựng" class="border p-2 rounded" id="vocab1">
                         <input type="number" min="0" max="100" placeholder="Ngữ pháp Đọc hiểu" class="border p-2 rounded" id="grammar1">
                         <input type="number" min="0" max="100" placeholder="Nghe" class="border p-2 rounded" id="listening1">
-                        <input type="number" min="0" max="100" placeholder="Kaiwa" class="border p-2 rounded" id="kaiwa1">
                     </div>
                 </div>
                 <!-- Nhóm bài 7-12 -->
                 <div>
                     <h3 class="font-medium">Bài 7-12</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                         <input type="number" min="0" max="100" placeholder="Từ vựng" class="border p-2 rounded" id="vocab2">
                         <input type="number" min="0" max="100" placeholder="Ngữ pháp Đọc hiểu" class="border p-2 rounded" id="grammar2">
                         <input type="number" min="0" max="100" placeholder="Nghe" class="border p-2 rounded" id="listening2">
-                        <input type="number" min="0" max="100" placeholder="Kaiwa" class="border p-2 rounded" id="kaiwa2">
                     </div>
                 </div>
                 <!-- Nhóm bài 13-18 -->
                 <div>
                     <h3 class="font-medium">Bài 13-18</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                         <input type="number" min="0" max="100" placeholder="Từ vựng" class="border p-2 rounded" id="vocab3">
                         <input type="number" min="0" max="100" placeholder="Ngữ pháp Đọc hiểu" class="border p-2 rounded" id="grammar3">
                         <input type="number" min="0" max="100" placeholder="Nghe" class="border p-2 rounded" id="listening3">
-                        <input type="number" min="0" max="100" placeholder="Kaiwa" class="border p-2 rounded" id="kaiwa3">
                     </div>
                 </div>
                 <!-- Nhóm bài 19-25 -->
                 <div>
                     <h3 class="font-medium">Bài 19-25</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                         <input type="number" min="0" max="100" placeholder="Từ vựng" class="border p-2 rounded" id="vocab4">
                         <input type="number" min="0" max="100" placeholder="Ngữ pháp Đọc hiểu" class="border p-2 rounded" id="grammar4">
                         <input type="number" min="0" max="100" placeholder="Nghe" class="border p-2 rounded" id="listening4">
-                        <input type="number" min="0" max="100" placeholder="Kaiwa" class="border p-2 rounded" id="kaiwa4">
                     </div>
                 </div>
                 <!-- Nhóm bài 26-30 -->
                 <div>
                     <h3 class="font-medium">Bài 26-30</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                         <input type="number" min="0" max="100" placeholder="Từ vựng" class="border p-2 rounded" id="vocab5">
                         <input type="number" min="0" max="100" placeholder="Ngữ pháp Đọc hiểu" class="border p-2 rounded" id="grammar5">
                         <input type="number" min="0" max="100" placeholder="Nghe" class="border p-2 rounded" id="listening5">
-                        <input type="number" min="0" max="100" placeholder="Kaiwa" class="border p-2 rounded" id="kaiwa5">
                     </div>
                 </div>
             </div>
             <div class="mt-4 flex space-x-4">
-                <button onclick="calculateResults()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Cập nhật dữ liệu</button>
+                <button onclick="calculateResults()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Cập nhật dữ liệu bài tập</button>
                 <a href="history.html" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Lịch sử báo cáo</a>
             </div>
         </div>
@@ -91,6 +112,7 @@
         <div id="results" class="bg-white p-6 rounded-lg shadow-md hidden">
             <h2 class="text-xl font-semibold mb-4">Kết quả</h2>
             <div id="studentInfo" class="mb-4"></div>
+            <div id="notification" class="mb-4 hidden p-4 rounded"></div>
             <table class="w-full border-collapse border">
                 <thead>
                     <tr class="bg-gray-200">
@@ -98,7 +120,6 @@
                         <th class="border p-2">Từ vựng</th>
                         <th class="border p-2">Ngữ pháp</th>
                         <th class="border p-2">Nghe</th>
-                        <th class="border p-2">Kaiwa</th>
                         <th class="border p-2">Tỷ lệ</th>
                         <th class="border p-2">Xếp loại</th>
                     </tr>
@@ -147,6 +168,18 @@
 
         let currentReportId = null;
 
+        // Hàm hiển thị form nhập điểm kiểm tra
+        function showTestInputs() {
+            document.getElementById('testInput').classList.remove('hidden');
+            document.getElementById('assignmentInput').classList.add('hidden');
+        }
+
+        // Hàm hiển thị form nhập điểm bài tập
+        function showAssignmentInputs() {
+            document.getElementById('assignmentInput').classList.remove('hidden');
+            document.getElementById('testInput').classList.add('hidden');
+        }
+
         // Hàm lấy giá trị input
         function getInputValue(id) {
             const element = document.getElementById(id);
@@ -181,6 +214,9 @@
         function editResults() {
             document.getElementById('results').classList.add('hidden');
             document.getElementById('charts').classList.add('hidden');
+            document.getElementById('notification').classList.add('hidden');
+            document.getElementById('testInput').classList.add('hidden');
+            document.getElementById('assignmentInput').classList.add('hidden');
         }
 
         // Hàm vẽ biểu đồ
@@ -194,9 +230,9 @@
             }
 
             // Validate scores
-            const scoreCategories = ['vocab', 'grammar', 'listening', 'kaiwa'];
+            const scoreCategories = ['vocab', 'grammar', 'listening'];
             for (const category of scoreCategories) {
-                if (!report.scores[category] || report.scores[category].length !== 5) {
+                if (!report.scores[category]) {
                     console.error(`Invalid scores data for ${category}`);
                     alert('Dữ liệu điểm không hợp lệ để vẽ biểu đồ.');
                     return;
@@ -216,34 +252,27 @@
                 window.barChart = new Chart(ctxBar, {
                     type: 'bar',
                     data: {
-                        labels: ['1-6', '7-12', '13-18', '19-25', '26-30'],
+                        labels: report.type === 'test' ? [report.testName || 'Kiểm tra'] : ['1-6', '7-12', '13-18', '19-25', '26-30'],
                         datasets: [
                             {
                                 label: 'Từ vựng',
-                                data: report.scores.vocab.map(score => score !== null ? score : 0),
+                                data: report.type === 'test' ? [report.scores.vocab[0] !== null ? report.scores.vocab[0] : 0] : report.scores.vocab.map(score => score !== null ? score : 0),
                                 backgroundColor: 'rgba(75, 192, 192, 0.5)',
                                 borderColor: 'rgba(75, 192, 192, 1)',
                                 borderWidth: 1
                             },
                             {
                                 label: 'Ngữ pháp',
-                                data: report.scores.grammar.map(score => score !== null ? score : 0),
+                                data: report.type === 'test' ? [report.scores.grammar[0] !== null ? report.scores.grammar[0] : 0] : report.scores.grammar.map(score => score !== null ? score : 0),
                                 backgroundColor: 'rgba(255, 99, 132, 0.5)',
                                 borderColor: 'rgba(255, 99, 132, 1)',
                                 borderWidth: 1
                             },
                             {
                                 label: 'Nghe',
-                                data: report.scores.listening.map(score => score !== null ? score : 0),
+                                data: report.type === 'test' ? [report.scores.listening[0] !== null ? report.scores.listening[0] : 0] : report.scores.listening.map(score => score !== null ? score : 0),
                                 backgroundColor: 'rgba(54, 162, 235, 0.5)',
                                 borderColor: 'rgba(54, 162, 235, 1)',
-                                borderWidth: 1
-                            },
-                            {
-                                label: 'Kaiwa',
-                                data: report.scores.kaiwa.map(score => score !== null ? score : 0),
-                                backgroundColor: 'rgba(255, 206, 86, 0.5)',
-                                borderColor: 'rgba(255, 206, 86, 1)',
                                 borderWidth: 1
                             }
                         ]
@@ -262,14 +291,13 @@
                 window.radarChart = new Chart(ctxRadar, {
                     type: 'radar',
                     data: {
-                        labels: ['Từ vựng', 'Ngữ pháp', 'Nghe', 'Kaiwa'],
-                        datasets: ['1-6', '7-12', '13-18', '19-25', '26-30'].map((group, index) => ({
+                        labels: ['Từ vựng', 'Ngữ pháp', 'Nghe'],
+                        datasets: (report.type === 'test' ? [report.testName || 'Kiểm tra'] : ['1-6', '7-12', '13-18', '19-25', '26-30']).map((group, index) => ({
                             label: group,
                             data: [
                                 report.scores.vocab[index] !== null ? report.scores.vocab[index] : 0,
                                 report.scores.grammar[index] !== null ? report.scores.grammar[index] : 0,
-                                report.scores.listening[index] !== null ? report.scores.listening[index] : 0,
-                                report.scores.kaiwa[index] !== null ? report.scores.kaiwa[index] : 0
+                                report.scores.listening[index] !== null ? report.scores.listening[index] : 0
                             ],
                             fill: true,
                             backgroundColor: `rgba(${Math.min(index * 50, 255)}, 99, 132, 0.2)`,
@@ -295,18 +323,30 @@
             }
         }
 
-        // Hàm tính toán và hiển thị kết quả
-        async function calculateResults() {
+        // Hàm kiểm tra điều kiện Đạt/Không đạt
+        function checkPassCondition(results) {
+            const allAbove65 = results.every(r => r.avg > 65);
+            const noScoreBelow19 = results.every(r => 
+                (r.vocab === null || r.vocab >= 19) &&
+                (r.grammar === null || r.grammar >= 19) &&
+                (r.listening === null || r.listening >= 19)
+            );
+            return allAbove65 && noScoreBelow19 ? 'Đạt' : 'Không đạt';
+        }
+
+        // Hàm tính toán và hiển thị kết quả kiểm tra
+        async function calculateTestResults() {
             // Input validation
             const fullName = getTextValue('fullName');
             const className = getTextValue('class');
-            if (!fullName || !className) {
-                alert('Vui lòng nhập đầy đủ Họ và Tên và Lớp.');
+            const testName = getTextValue('testName');
+            if (!fullName || !className || !testName) {
+                alert('Vui lòng nhập đầy đủ Họ và Tên, Lớp và Tên bài kiểm tra.');
                 return;
             }
 
             // Validate scores
-            const scoreInputs = document.querySelectorAll('input[type="number"]');
+            const scoreInputs = document.querySelectorAll('#testInput input[type="number"]');
             for (let input of scoreInputs) {
                 const value = parseFloat(input.value);
                 if (input.value !== '' && (isNaN(value) || value < 0 || value > 100)) {
@@ -320,7 +360,86 @@
             const union = getTextValue('union');
             const xkld = getTextValue('xkld');
 
-            // Lấy điểm
+            // Lấy điểm kiểm tra
+            const scores = {
+                vocab: [getInputValue('vocabTest')],
+                grammar: [getInputValue('grammarTest')],
+                listening: [getInputValue('listeningTest')]
+            };
+
+            // Tính tỷ lệ và xếp loại
+            const results = [{
+                group: testName,
+                vocab: scores.vocab[0],
+                grammar: scores.grammar[0],
+                listening: scores.listening[0],
+                avg: [scores.vocab[0], scores.grammar[0], scores.listening[0]]
+                    .filter(score => score !== null)
+                    .reduce((sum, score) => sum + score, 0) / 
+                    [scores.vocab[0], scores.grammar[0], scores.listening[0]].filter(score => score !== null).length || 0,
+                rank: '',
+                symbol: ''
+            }];
+
+            results.forEach(r => {
+                if (r.avg >= 85) { r.rank = 'A'; r.symbol = '◎'; }
+                else if (r.avg >= 70) { r.rank = 'B'; r.symbol = '○'; }
+                else if (r.avg >= 60) { r.rank = 'C'; r.symbol = '○'; }
+                else if (r.avg >= 55) { r.rank = 'D'; r.symbol = '△'; }
+                else { r.rank = 'F'; r.symbol = 'X'; }
+            });
+
+            const report = {
+                fullName,
+                className,
+                company,
+                union,
+                xkld,
+                scores,
+                results,
+                passStatus: checkPassCondition(results),
+                testName,
+                type: 'test',
+                timestamp: new Date().toISOString()
+            };
+
+            // Lưu báo cáo
+            await saveReport(report);
+
+            // Hiển thị kết quả
+            displayResults(report);
+
+            // Clear form
+            document.querySelectorAll('#testInput input, #testInput select').forEach(input => input.value = '');
+            currentReportId = null;
+        }
+
+        // Hàm tính toán và hiển thị kết quả bài tập
+        async function calculateResults() {
+            // Input validation
+            const fullName = getTextValue('fullName');
+            const className = getTextValue('class');
+            if (!fullName || !className) {
+                alert('Vui lòng nhập đầy đủ Họ và Tên và Lớp.');
+                return;
+            }
+
+            // Validate scores
+            const scoreInputs = document.querySelectorAll('#assignmentInput input[type="number"]');
+            for (let input of scoreInputs) {
+                const value = parseFloat(input.value);
+                if (input.value !== '' && (isNaN(value) || value < 0 || value > 100)) {
+                    alert('Điểm phải nằm trong khoảng từ 0 đến 100.');
+                    return;
+                }
+            }
+
+            // Lấy thông tin học viên
+            const company = getTextValue('company');
+            const union = getTextValue('union');
+            const xkld = getTextValue('xkld');
+
+            // Lấy điểm bài tập
             const scores = {
                 vocab: [
                     getInputValue('vocab1'),
@@ -342,13 +461,6 @@
                     getInputValue('listening3'),
                     getInputValue('listening4'),
                     getInputValue('listening5')
-                ],
-                kaiwa: [
-                    getInputValue('kaiwa1'),
-                    getInputValue('kaiwa2'),
-                    getInputValue('kaiwa3'),
-                    getInputValue('kaiwa4'),
-                    getInputValue('kaiwa5')
                 ]
             };
 
@@ -358,8 +470,7 @@
                 const validScores = [
                     scores.vocab[index],
                     scores.grammar[index],
-                    scores.listening[index],
-                    scores.kaiwa[index]
+                    scores.listening[index]
                 ].filter(score => score !== null);
                 const avg = validScores.length > 0 ? validScores.reduce((sum, score) => sum + score, 0) / validScores.length : 0;
                 let rank = '';
@@ -374,7 +485,6 @@
                     vocab: scores.vocab[index],
                     grammar: scores.grammar[index],
                     listening: scores.listening[index],
-                    kaiwa: scores.kaiwa[index],
                     avg,
                     rank,
                     symbol
@@ -389,6 +499,8 @@
                 xkld,
                 scores,
                 results,
+                passStatus: checkPassCondition(results),
+                type: 'assignment',
                 timestamp: new Date().toISOString()
             };
 
@@ -399,7 +511,7 @@
             displayResults(report);
 
             // Clear form
-            document.querySelectorAll('input').forEach(input => input.value = '');
+            document.querySelectorAll('#assignmentInput input').forEach(input => input.value = '');
             currentReportId = null;
         }
 
@@ -414,6 +526,14 @@
                 <p><strong>XKLD:</strong> ${report.xkld}</p>
             `;
 
+            // Hiển thị thông báo Đạt/Không đạt
+            const notificationDiv = document.getElementById('notification');
+            notificationDiv.classList.remove('hidden');
+            notificationDiv.classList.remove('bg-green-100', 'bg-red-100', 'text-green-800', 'text-red-800');
+            notificationDiv.classList.add(report.passStatus === 'Đạt' ? 'bg-green-100' : 'bg-red-100');
+            notificationDiv.classList.add(report.passStatus === 'Đạt' ? 'text-green-800' : 'text-red-800');
+            notificationDiv.innerHTML = `<strong>Kết quả đánh giá:</strong> ${report.passStatus}`;
+
             // Hiển thị bảng kết quả
             const resultTable = document.getElementById('resultTable');
             resultTable.innerHTML = report.results.map(r => `
@@ -422,7 +542,6 @@
                     <td class="border p-2">${r.vocab !== null ? r.vocab : '-'}</td>
                     <td class="border p-2">${r.grammar !== null ? r.grammar : '-'}</td>
                     <td class="border p-2">${r.listening !== null ? r.listening : '-'}</td>
-                    <td class="border p-2">${r.kaiwa !== null ? r.kaiwa : '-'}</td>
                     <td class="border p-2">${Math.round(r.avg)}%</td>
                     <td class="border p-2 ${r.rank === 'A' ? 'bg-green-100' : r.rank === 'F' ? 'bg-red-100' : ''}">
                         ${r.rank} (${r.symbol})
@@ -461,12 +580,21 @@
                         document.getElementById('company').value = report.company;
                         document.getElementById('union').value = report.union;
                         document.getElementById('xkld').value = report.xkld;
-                        ['vocab', 'grammar', 'listening', 'kaiwa'].forEach((category, i) => {
-                            for (let j = 1; j <= 5; j++) {
-                                const score = report.scores[category][j - 1];
-                                document.getElementById(`${category}${j}`).value = score !== null ? score : '';
-                            }
-                        });
+                        if (report.type === 'test') {
+                            document.getElementById('testInput').classList.remove('hidden');
+                            document.getElementById('testName').value = report.testName || '';
+                            document.getElementById('vocabTest').value = report.scores.vocab[0] !== null ? report.scores.vocab[0] : '';
+                            document.getElementById('grammarTest').value = report.scores.grammar[0] !== null ? report.scores.grammar[0] : '';
+                            document.getElementById('listeningTest').value = report.scores.listening[0] !== null ? report.scores.listening[0] : '';
+                        } else {
+                            document.getElementById('assignmentInput').classList.remove('hidden');
+                            ['vocab', 'grammar', 'listening'].forEach((category, i) => {
+                                for (let j = 1; j <= 5; j++) {
+                                    const score = report.scores[category][j - 1];
+                                    document.getElementById(`${category}${j}`).value = score !== null ? score : '';
+                                }
+                            });
+                        }
                     } else {
                         alert('Báo cáo không tồn tại.');
                     }
