@@ -16,6 +16,10 @@
         <!-- Danh sách báo cáo -->
         <div class="bg-white p-6 rounded-lg shadow-md mb-6">
             <h2 class="text-xl font-semibold mb-4">Danh sách báo cáo</h2>
+            <!-- Khung tìm kiếm -->
+            <div class="mb-4">
+                <input type="text" id="searchInput" class="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Tìm kiếm theo Họ và Tên hoặc Lớp...">
+            </div>
             <table class="w-full border-collapse border">
                 <thead>
                     <tr class="bg-gray-200">
@@ -112,7 +116,7 @@
         }
 
         // Load report history
-        async function loadHistory() {
+        async function loadHistory(searchQuery = '') {
             if (!db) {
                 alert('Cơ sở dữ liệu không khả dụng.');
                 return;
@@ -121,8 +125,18 @@
                 const snapshot = await db.collection('testHistorybaocao').orderBy('testDuration', 'desc').get();
                 const historyTable = document.getElementById('historyTable');
                 if (!historyTable) throw new Error('History table element not found');
-                historyTable.innerHTML = snapshot.docs.map(doc => {
-                    const report = { id: doc.id, ...doc.data() };
+                let reports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // Lọc báo cáo theo từ khóa tìm kiếm
+                if (searchQuery) {
+                    searchQuery = searchQuery.toLowerCase().trim();
+                    reports = reports.filter(report => 
+                        (report.fullName || '').toLowerCase().includes(searchQuery) ||
+                        (report.className || '').toLowerCase().includes(searchQuery)
+                    );
+                }
+
+                historyTable.innerHTML = reports.map(report => {
                     return `
                         <tr>
                             <td class="border p-2">${formatDate(report.testDuration)}</td>
@@ -156,7 +170,7 @@
                 try {
                     await db.collection('testHistorybaocao').doc(id).delete();
                     alert('Báo cáo đã được xóa thành công!');
-                    loadHistory();
+                    loadHistory(document.getElementById('searchInput').value);
                 } catch (error) {
                     console.error('Error deleting report:', error.message, error.stack);
                     alert('Có lỗi khi xóa báo cáo: ' + error.message);
@@ -382,11 +396,19 @@
             }
         }
 
-        // Load history on page load
+        // Search functionality
         document.addEventListener('DOMContentLoaded', () => {
             try {
                 if (db) {
                     loadHistory();
+                    const searchInput = document.getElementById('searchInput');
+                    if (searchInput) {
+                        searchInput.addEventListener('input', () => {
+                            loadHistory(searchInput.value);
+                        });
+                    } else {
+                        console.warn('Search input element not found.');
+                    }
                 } else {
                     console.warn('Firestore not initialized. Skipping loadHistory.');
                 }
