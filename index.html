@@ -22,7 +22,6 @@
                 <input id="company" type="text" placeholder="Tên Công ty" class="border p-2 rounded">
                 <input id="union" type="text" placeholder="Nghiệp Đoàn" class="border p-2 rounded">
                 <input id="xkld" type="text" placeholder="XKLD" class="border p-2 rounded">
-                <input id="testDate" type="date" class="border p-2 rounded">
             </div>
             <div class="mt-4 flex space-x-4">
                 <button onclick="showTestInputs()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Nhập điểm kiểm tra</button>
@@ -113,7 +112,6 @@
         <div id="results" class="bg-white p-6 rounded-lg shadow-md hidden">
             <h2 class="text-xl font-semibold mb-4">Kết quả</h2>
             <div id="studentInfo" class="mb-4"></div>
-            <div id="notification" class="mb-4 hidden p-4 rounded"></div>
             <table class="w-full border-collapse border">
                 <thead>
                     <tr class="bg-gray-200">
@@ -123,6 +121,7 @@
                         <th class="border p-2">Nghe</th>
                         <th class="border p-2">Tỷ lệ</th>
                         <th class="border p-2">Xếp loại</th>
+                        <th class="border p-2">Kết quả</th>
                     </tr>
                 </thead>
                 <tbody id="resultTable"></tbody>
@@ -194,16 +193,14 @@
             return element ? element.value.trim() : '';
         }
 
-        // Hàm lấy giá trị ngày làm bài
-        function getTestDate() {
-            const date = getTextValue('testDate');
-            return date ? `${date}T00:00:00.000Z` : '';
+        // Hàm lấy ngày hiện tại
+        function getCurrentDate() {
+            return new Date().toISOString();
         }
 
         // Hàm định dạng ngày
         function formatDate(isoString) {
             if (!isoString) return '';
-            // Handle non-ISO strings (e.g., previous text-based testDuration)
             if (!isoString.includes('T')) return isoString;
             const date = new Date(isoString);
             return date.toLocaleDateString('vi-VN', {
@@ -234,7 +231,6 @@
         function editResults() {
             document.getElementById('results').classList.add('hidden');
             document.getElementById('charts').classList.add('hidden');
-            document.getElementById('notification').classList.add('hidden');
             document.getElementById('testInput').classList.add('hidden');
             document.getElementById('assignmentInput').classList.add('hidden');
         }
@@ -379,7 +375,7 @@
             const company = getTextValue('company');
             const union = getTextValue('union');
             const xkld = getTextValue('xkld');
-            const testDuration = getTestDate();
+            const testDuration = getCurrentDate();
 
             // Lấy điểm kiểm tra
             const scores = {
@@ -438,7 +434,6 @@
             document.getElementById('company').value = '';
             document.getElementById('union').value = '';
             document.getElementById('xkld').value = '';
-            document.getElementById('testDate').value = '';
             currentReportId = null;
         }
 
@@ -466,7 +461,7 @@
             const company = getTextValue('company');
             const union = getTextValue('union');
             const xkld = getTextValue('xkld');
-            const testDuration = getTestDate();
+            const testDuration = getCurrentDate();
 
             // Lấy điểm bài tập
             const scores = {
@@ -547,7 +542,6 @@
             document.getElementById('company').value = '';
             document.getElementById('union').value = '';
             document.getElementById('xkld').value = '';
-            document.getElementById('testDate').value = '';
             currentReportId = null;
         }
 
@@ -563,16 +557,9 @@
                 <p><strong>Ngày làm bài:</strong> ${formatDate(report.testDuration)}</p>
             `;
 
-            // Hiển thị thông báo Đạt/Không đạt
-            const notificationDiv = document.getElementById('notification');
-            notificationDiv.classList.remove('hidden');
-            notificationDiv.classList.remove('bg-green-100', 'bg-red-100', 'text-green-800', 'text-red-800');
-            notificationDiv.classList.add(report.passStatus === 'Đạt' ? 'bg-green-100' : 'bg-red-100');
-            notificationDiv.classList.add(report.passStatus === 'Đạt' ? 'text-green-800' : 'text-red-800');
-            notificationDiv.innerHTML = `<strong>Kết quả đánh giá:</strong> ${report.passStatus}`;
-
             // Hiển thị bảng kết quả
             const resultTable = document.getElementById('resultTable');
+            const passStatus = checkPassCondition(report.results);
             resultTable.innerHTML = report.results.map(r => `
                 <tr>
                     <td class="border p-2">${r.group}</td>
@@ -582,6 +569,9 @@
                     <td class="border p-2">${Math.round(r.avg)}%</td>
                     <td class="border p-2 ${r.rank === 'A' ? 'bg-green-100' : r.rank === 'F' ? 'bg-red-100' : ''}">
                         ${r.rank} (${r.symbol})
+                    </td>
+                    <td class="border p-2 ${passStatus === 'Đạt' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                        ${passStatus}
                     </td>
                 </tr>
             `).join('');
@@ -617,12 +607,6 @@
                         document.getElementById('company').value = report.company;
                         document.getElementById('union').value = report.union;
                         document.getElementById('xkld').value = report.xkld;
-                        if (report.testDuration && report.testDuration.includes('T')) {
-                            const date = new Date(report.testDuration);
-                            document.getElementById('testDate').value = date.toISOString().split('T')[0];
-                        } else {
-                            document.getElementById('testDate').value = '';
-                        }
                         if (report.type === 'test') {
                             document.getElementById('testInput').classList.remove('hidden');
                             document.getElementById('testName').value = report.testName || '';
