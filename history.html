@@ -19,9 +19,9 @@
             <table class="w-full border-collapse border">
                 <thead>
                     <tr class="bg-gray-200">
+                        <th class="border p-2">Thời gian</th>
                         <th class="border p-2">Họ và Tên</th>
                         <th class="border p-2">Lớp</th>
-                        <th class="border p-2">Thời gian</th>
                         <th class="border p-2">Thao tác</th>
                     </tr>
                 </thead>
@@ -36,6 +36,7 @@
         <div id="results" class="bg-white p-6 rounded-lg shadow-md hidden">
             <h2 class="text-xl font-semibold mb-4">Kết quả</h2>
             <div id="studentInfo" class="mb-4"></div>
+            <div id="notification" class="mb-4 hidden p-4 rounded"></div>
             <table class="w-full border-collapse border">
                 <thead>
                     <tr class="bg-gray-200">
@@ -43,7 +44,6 @@
                         <th class="border p-2">Từ vựng</th>
                         <th class="border p-2">Ngữ pháp</th>
                         <th class="border p-2">Nghe</th>
-                        <th class="border p-2">Kaiwa</th>
                         <th class="border p-2">Trung bình</th>
                         <th class="border p-2">Xếp loại</th>
                     </tr>
@@ -88,6 +88,19 @@
             alert('Không thể kết nối với cơ sở dữ liệu: ' + error.message);
         }
 
+        // Hàm định dạng ngày
+        function formatDate(isoString) {
+            if (!isoString) return 'N/A';
+            // Handle non-ISO strings (e.g., previous text-based testDuration)
+            if (!isoString.includes('T')) return isoString;
+            const date = new Date(isoString);
+            return date.toLocaleDateString('vi-VN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+        }
+
         // Load report history
         async function loadHistory() {
             if (!db) {
@@ -95,35 +108,23 @@
                 return;
             }
             try {
-                const snapshot = await db.collection('testHistorybaocao').orderBy('timestamp', 'desc').get();
+                const snapshot = await db.collection('testHistorybaocao').orderBy('testDuration', 'desc').get();
                 const historyTable = document.getElementById('historyTable');
                 if (!historyTable) throw new Error('History table element not found');
                 historyTable.innerHTML = snapshot.docs.map(doc => {
                     const report = { id: doc.id, ...doc.data() };
-                    let timestamp = 'N/A';
-                    try {
-                        if (report.timestamp) {
-                            if (typeof report.timestamp === 'number') {
-                                timestamp = new Date(report.timestamp).toLocaleString('vi-VN');
-                            } else if (report.timestamp.toDate) {
-                                timestamp = report.timestamp.toDate().toLocaleString('vi-VN');
-                            }
-                        }
-                    } catch (e) {
-                        console.warn('Invalid timestamp format:', report.timestamp, e);
-                    }
                     return `
                         <tr>
+                            <td class="border p-2">${formatDate(report.testDuration)}</td>
                             <td class="border p-2">${report.fullName || 'N/A'}</td>
                             <td class="border p-2">${report.className || 'N/A'}</td>
-                            <td class="border p-2">${timestamp}</td>
                             <td class="border p-2">
                                 <button onclick="viewReport('${report.id}')" class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">Xem</button>
                                 <a href="index.html?edit=${report.id}" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">Chỉnh sửa</a>
                                 <button onclick="deleteReport('${report.id}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Xóa</button>
                             </td>
                         </tr>
-                   `;
+                    `;
                 }).join('');
             } catch (error) {
                 console.error('Error loading history:', error.message, error.stack);
@@ -171,10 +172,9 @@
                 if (!report.scores || typeof report.scores !== 'object') {
                     console.warn('Invalid scores data, using default:', report.scores);
                     report.scores = {
-                        vocab: [0, 0, 0, 0, 0],
-                        grammar: [0, 0, 0, 0, 0],
-                        listening: [0, 0, 0, 0, 0],
-                        kaiwa: [0, 0, 0, 0, 0]
+                        vocab: report.type === 'test' ? [0] : [0, 0, 0, 0, 0],
+                        grammar: report.type === 'test' ? [0] : [0, 0, 0, 0, 0],
+                        listening: report.type === 'test' ? [0] : [0, 0, 0, 0, 0]
                     };
                 }
 
@@ -188,15 +188,14 @@
         // Display results and charts
         function displayResults(report) {
             try {
-                // Log report data for debugging
-                console.log('Processing report:', report);
-
                 // Validate DOM elements
                 const studentInfo = document.getElementById('studentInfo');
+                const notificationDiv = document.getElementById('notification');
                 const resultTable = document.getElementById('resultTable');
                 const resultsSection = document.getElementById('results');
                 const chartsSection = document.getElementById('charts');
                 if (!studentInfo) throw new Error('Student info element not found');
+                if (!notificationDiv) throw new Error('Notification element not found');
                 if (!resultTable) throw new Error('Result table element not found');
                 if (!resultsSection) throw new Error('Results section not found');
                 if (!chartsSection) throw new Error('Charts section not found');
@@ -208,18 +207,24 @@
                     <p><strong>Công ty:</strong> ${report.company || 'N/A'}</p>
                     <p><strong>Nghiệp đoàn:</strong> ${report.union || 'N/A'}</p>
                     <p><strong>XKLD:</strong> ${report.xkld || 'N/A'}</p>
+                    <p><strong>Ngày làm bài:</strong> ${formatDate(report.testDuration)}</p>
                 `;
+
+                // Display pass/fail notification
+                notificationDiv.classList.remove('hidden', 'bg-green-100', 'bg-red-100', 'text-green-800', 'text-red-800');
+                notificationDiv.classList.add(report.passStatus === 'Đạt' ? 'bg-green-100' : 'bg-red-100');
+                notificationDiv.classList.add(report.passStatus === 'Đạt' ? 'text-green-800' : 'text-red-800');
+                notificationDiv.innerHTML = `<strong>Kết quả đánh giá:</strong> ${report.passStatus || 'N/A'}`;
 
                 // Display results table
                 resultTable.innerHTML = (report.results || []).map((r, index) => {
                     try {
                         const validated = {
                             group: typeof r.group === 'string' && r.group ? r.group : `Nhóm ${index + 1}`,
-                            vocab: typeof r.vocab === 'number' && !isNaN(r.vocab) ? r.vocab : 0,
-                            grammar: typeof r.grammar === 'number' && !isNaN(r.grammar) ? r.grammar : 0,
-                            listening: typeof r.listening === 'number' && !isNaN(r.listening) ? r.listening : 0,
-                            kaiwa: typeof r.kaiwa === 'number' && !isNaN(r.kaiwa) ? r.kaiwa : 0,
-                            avg: typeof r.avg === 'number' && !isNaN(r.avg) ? r.avg.toFixed(2) : 'N/A',
+                            vocab: typeof r.vocab === 'number' && !isNaN(r.vocab) ? r.vocab : '-',
+                            grammar: typeof r.grammar === 'number' && !isNaN(r.grammar) ? r.grammar : '-',
+                            listening: typeof r.listening === 'number' && !isNaN(r.listening) ? r.listening : '-',
+                            avg: typeof r.avg === 'number' && !isNaN(r.avg) ? Math.round(r.avg) : '-',
                             rank: typeof r.rank === 'string' && r.rank ? r.rank : 'N/A',
                             symbol: typeof r.symbol === 'string' && r.symbol ? r.symbol : 'N/A'
                         };
@@ -229,9 +234,10 @@
                                 <td class="border p-2">${validated.vocab}</td>
                                 <td class="border p-2">${validated.grammar}</td>
                                 <td class="border p-2">${validated.listening}</td>
-                                <td class="border p-2">${validated.kaiwa}</td>
-                                <td class="border p-2">${validated.avg}</td>
-                                <td class="border p-2">${validated.rank} (${validated.symbol})</td>
+                                <td class="border p-2">${validated.avg}%</td>
+                                <td class="border p-2 ${validated.rank === 'A' ? 'bg-green-100' : validated.rank === 'F' ? 'bg-red-100' : ''}">
+                                    ${validated.rank} (${validated.symbol})
+                                </td>
                             </tr>
                         `;
                     } catch (e) {
@@ -263,23 +269,12 @@
                 }
 
                 // Prepare data for charts
-                const groups = ['1-6', '7-12', '13-18', '19-25', '26-30'];
-                const defaultScores = [0, 0, 0, 0, 0];
+                const labels = report.type === 'test' ? [report.testName || 'Kiểm tra'] : ['1-6', '7-12', '13-18', '19-25', '26-30'];
                 const scores = {
-                    vocab: Array.isArray(report.scores.vocab) && report.scores.vocab.length === 5
-                        ? report.scores.vocab.map(val => (typeof val === 'number' && !isNaN(val) ? val : 0))
-                        : defaultScores,
-                    grammar: Array.isArray(report.scores.grammar) && report.scores.grammar.length === 5
-                        ? report.scores.grammar.map(val => (typeof val === 'number' && !isNaN(val) ? val : 0))
-                        : defaultScores,
-                    listening: Array.isArray(report.scores.listening) && report.scores.listening.length === 5
-                        ? report.scores.listening.map(val => (typeof val === 'number' && !isNaN(val) ? val : 0))
-                        : defaultScores,
-                    kaiwa: Array.isArray(report.scores.kaiwa) && report.scores.kaiwa.length === 5
-                        ? report.scores.kaiwa.map(val => (typeof val === 'number' && !isNaN(val) ? val : 0))
-                        : defaultScores
+                    vocab: Array.isArray(report.scores?.vocab) ? report.scores.vocab.map(val => (typeof val === 'number' && !isNaN(val) ? val : 0)) : (report.type === 'test' ? [0] : [0, 0, 0, 0, 0]),
+                    grammar: Array.isArray(report.scores?.grammar) ? report.scores.grammar.map(val => (typeof val === 'number' && !isNaN(val) ? val : 0)) : (report.type === 'test' ? [0] : [0, 0, 0, 0, 0]),
+                    listening: Array.isArray(report.scores?.listening) ? report.scores.listening.map(val => (typeof val === 'number' && !isNaN(val) ? val : 0)) : (report.type === 'test' ? [0] : [0, 0, 0, 0, 0])
                 };
-                console.log('Prepared scores for charts:', scores);
 
                 // Bar Chart
                 try {
@@ -290,7 +285,7 @@
                     window.barChart = new Chart(ctxBar, {
                         type: 'bar',
                         data: {
-                            labels: groups,
+                            labels: labels,
                             datasets: [
                                 {
                                     label: 'Từ vựng',
@@ -312,13 +307,6 @@
                                     backgroundColor: 'rgba(54, 162, 235, 0.5)',
                                     borderColor: 'rgba(54, 162, 235, 1)',
                                     borderWidth: 1
-                                },
-                                {
-                                    label: 'Kaiwa',
-                                    data: scores.kaiwa,
-                                    backgroundColor: 'rgba(255, 206, 86, 0.5)',
-                                    borderColor: 'rgba(255, 206, 86, 1)',
-                                    borderWidth: 1
                                 }
                             ]
                         },
@@ -331,9 +319,9 @@
                             plugins: { legend: { position: 'top' } }
                         }
                     });
-                    console.log('Bar chart created successfully');
                 } catch (chartError) {
                     console.error('Error creating bar chart:', chartError.message, chartError.stack);
+                    alert('Có lỗi khi vẽ biểu đồ cột.');
                 }
 
                 // Radar Chart
@@ -345,22 +333,21 @@
                     window.radarChart = new Chart(ctxRadar, {
                         type: 'radar',
                         data: {
-                            labels: ['Từ vựng', 'Ngữ pháp', 'Nghe', 'Kaiwa'],
-                            datasets: groups.map((group, index) => ({
+                            labels: ['Từ vựng', 'Ngữ pháp', 'Nghe'],
+                            datasets: labels.map((group, index) => ({
                                 label: group,
                                 data: [
                                     scores.vocab[index] || 0,
                                     scores.grammar[index] || 0,
-                                    scores.listening[index] || 0,
-                                    scores.kaiwa[index] || 0
+                                    scores.listening[index] || 0
                                 ],
                                 fill: true,
-                                backgroundColor: `rgba(${index * 50}, 99, 132, 0.2)`,
-                                borderColor: `rgba(${index * 50}, 99, 132, 1)`,
-                                pointBackgroundColor: `rgba(${index * 50}, 99, 132, 1)`,
+                                backgroundColor: `rgba(${Math.min(index * 50, 255)}, 99, 132, 0.2)`,
+                                borderColor: `rgba(${Math.min(index * 50, 255)}, 99, 132, 1)`,
+                                pointBackgroundColor: `rgba(${Math.min(index * 50, 255)}, 99, 132, 1)`,
                                 pointBorderColor: '#fff',
                                 pointHoverBackgroundColor: '#fff',
-                                pointHoverBorderColor: `rgba(${index * 50}, 99, 132, 1)`
+                                pointHoverBorderColor: `rgba(${Math.min(index * 50, 255)}, 99, 132, 1)`
                             }))
                         },
                         options: {
@@ -371,14 +358,13 @@
                             plugins: { legend: { position: 'top' } }
                         }
                     });
-                    console.log('Radar chart created successfully');
                 } catch (chartError) {
                     console.error('Error creating radar chart:', chartError.message, chartError.stack);
+                    alert('Có lỗi khi vẽ biểu đồ radar.');
                 }
             } catch (error) {
                 console.error('Error displaying results:', error.message, error.stack);
                 alert('Có lỗi khi hiển thị kết quả: ' + (error.message || 'Không xác định'));
-                throw error; // Re-throw to ensure error is visible in console
             }
         }
 
@@ -392,6 +378,7 @@
                 }
             } catch (error) {
                 console.error('Error during page load:', error.message, error.stack);
+                alert('Có lỗi khi tải trang: ' + error.message);
             }
         });
     </script>
