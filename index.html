@@ -22,6 +22,7 @@
                 <input id="company" type="text" placeholder="Tên Công ty" class="border p-2 rounded">
                 <input id="union" type="text" placeholder="Nghiệp Đoàn" class="border p-2 rounded">
                 <input id="xkld" type="text" placeholder="XKLD" class="border p-2 rounded">
+                <input id="testDate" type="date" class="border p-2 rounded">
             </div>
             <div class="mt-4 flex space-x-4">
                 <button onclick="showTestInputs()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Nhập điểm kiểm tra</button>
@@ -193,6 +194,25 @@
             return element ? element.value.trim() : '';
         }
 
+        // Hàm lấy giá trị ngày làm bài
+        function getTestDate() {
+            const date = getTextValue('testDate');
+            return date ? `${date}T00:00:00.000Z` : '';
+        }
+
+        // Hàm định dạng ngày
+        function formatDate(isoString) {
+            if (!isoString) return '';
+            // Handle non-ISO strings (e.g., previous text-based testDuration)
+            if (!isoString.includes('T')) return isoString;
+            const date = new Date(isoString);
+            return date.toLocaleDateString('vi-VN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+        }
+
         // Hàm lưu báo cáo vào Firestore
         async function saveReport(report) {
             try {
@@ -359,6 +379,7 @@
             const company = getTextValue('company');
             const union = getTextValue('union');
             const xkld = getTextValue('xkld');
+            const testDuration = getTestDate();
 
             // Lấy điểm kiểm tra
             const scores = {
@@ -395,6 +416,7 @@
                 company,
                 union,
                 xkld,
+                testDuration,
                 scores,
                 results,
                 passStatus: checkPassCondition(results),
@@ -411,6 +433,12 @@
 
             // Clear form
             document.querySelectorAll('#testInput input, #testInput select').forEach(input => input.value = '');
+            document.getElementById('fullName').value = '';
+            document.getElementById('class').value = '';
+            document.getElementById('company').value = '';
+            document.getElementById('union').value = '';
+            document.getElementById('xkld').value = '';
+            document.getElementById('testDate').value = '';
             currentReportId = null;
         }
 
@@ -438,6 +466,7 @@
             const company = getTextValue('company');
             const union = getTextValue('union');
             const xkld = getTextValue('xkld');
+            const testDuration = getTestDate();
 
             // Lấy điểm bài tập
             const scores = {
@@ -497,6 +526,7 @@
                 company,
                 union,
                 xkld,
+                testDuration,
                 scores,
                 results,
                 passStatus: checkPassCondition(results),
@@ -512,6 +542,12 @@
 
             // Clear form
             document.querySelectorAll('#assignmentInput input').forEach(input => input.value = '');
+            document.getElementById('fullName').value = '';
+            document.getElementById('class').value = '';
+            document.getElementById('company').value = '';
+            document.getElementById('union').value = '';
+            document.getElementById('xkld').value = '';
+            document.getElementById('testDate').value = '';
             currentReportId = null;
         }
 
@@ -524,6 +560,7 @@
                 <p><strong>Công ty:</strong> ${report.company}</p>
                 <p><strong>Nghiệp đoàn:</strong> ${report.union}</p>
                 <p><strong>XKLD:</strong> ${report.xkld}</p>
+                <p><strong>Ngày làm bài:</strong> ${formatDate(report.testDuration)}</p>
             `;
 
             // Hiển thị thông báo Đạt/Không đạt
@@ -580,6 +617,12 @@
                         document.getElementById('company').value = report.company;
                         document.getElementById('union').value = report.union;
                         document.getElementById('xkld').value = report.xkld;
+                        if (report.testDuration && report.testDuration.includes('T')) {
+                            const date = new Date(report.testDuration);
+                            document.getElementById('testDate').value = date.toISOString().split('T')[0];
+                        } else {
+                            document.getElementById('testDate').value = '';
+                        }
                         if (report.type === 'test') {
                             document.getElementById('testInput').classList.remove('hidden');
                             document.getElementById('testName').value = report.testName || '';
